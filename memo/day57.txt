@@ -1,0 +1,145 @@
+day57
+
+1. 권환
+	- 허가권 / 소유권 (permission / ownership)
+		-rwxr--r--.	1	root	root	0	2월 17일 14:20	test
+	 	 허가권		링크	소유권	용량	날짜		시간	파일/디렉토리명
+						UID	GID
+
+		1) 허가권
+			rwx			rwx					rwx
+			UID(유저)		GID(그룹(다른 사용자))	other(uid, gid에 속하지 않은 모든 계정)
+			421			421					421
+			7			7					7
+
+			r	q	x
+			2²	2²	1
+			4	2	1
+
+	- UID > GID > OTHER
+
+	- 소유권 > 허가권
+
+		r(4)	Read(읽기권한)		파일 : 문서 내용 보기(cat, vi, ..)
+							디렉터리 : dir 내용 보기(ls)
+
+		w(2)	Write(쓰기 권한)	파일 : 문서 내용 수정, 저장, 쓰기(vi, ..)
+							디렉토리 : file/dir 생성 삭제 이름 변경(mkdir)
+
+		x(1) Execute(실행 권한)	파일 : 파일에 대한 실행 권한(일반 사용자 sh명령, 스크립드, 명령어)
+							디렉토리 : 디렉토리 접근 권한(cd)
+
+		ex)
+			숫자를 문자로 : symbolic 기법
+			UID : sun / GID : A 사람
+
+			구분		UID	GID	OTHER
+			dir	124	--x	-w-	r--		sun 접근 권한
+									A는 쓰기 권한이 있으나 접근 권한이 없어 사용 불가
+									다른 사람은 읽기 권한이 있으나 접근 권한이 없어 사용 불가
+									root 관리자 모든 권한 무시
+
+				057	---	r-x	rwx		sun 모든 권한x
+									A는 읽기/접근 권한
+									다른 사람은 모든 권한
+
+				235	-w-	-wx	r-x		sun은 touch 명령 불가능
+									sun은 쓰기 권한이 있지만 접근 권한이 있지만 사용 불가
+									A는 쓰기/접근 권한
+									다른 사람은 읽기/접근 권한
+
+				564	r-x	rw-	r--		sun은 읽기/접근 권한
+									A는 읽기/쓰기 권한이 있지만 접근 권한이 없어 사용 불가
+									다른 사람은 읽기 권한이 있으나 접근 권한이 없어 사용 불가
+
+				362	-wx	rw-	-w-		sun은 쓰기/접근 권한
+									A는 읽기/쓰기 권한이 있지만 접근 권한이 없어 사용 불가
+									다른 사람은 쓰기 권한이 있으나 접근권이 없어 사용 불가
+
+		dir : X 권한이 없으면 사용 불가
+			관리자는 모든 권한 무시
+			소유권(User/Group/Other) > 허가권(rwx)
+
+			2) ch(change) 명령어
+				chage	pw만료일(수정 괸리자, 사용자는 chage -l  사용자로 확인만 가능)
+						암호 만료일 활성화
+						암호를 바꿔야 하는 최대 날짜는 1~2개월로 지정
+
+				chgrp	그룹 변경(수정 관리자)
+
+				chsh		쉘 변	경(모든 사용자, 쉘 변경)
+
+				chmod	허가권 변경
+						숫자(numeric) 방법 원래 권한 무시 덮어쓰기
+						ex) chmod 456 1
+							symbolic 방법 원본 상태 보존 권한 회수/추가
+						ex) + 권한 추가 -권한 회수, = 이전 권한 무시 권한 적용
+							u +-= rwx	user
+							g +-= rwx	group
+							o +-= rwx other
+							a +-= rwx	all(UID/GID/OTHER)
+
+				chown	소유권 변경
+				chown UID: 해당파일
+				chown :GID 해당파일
+				chown UID:GID 해당 파일
+
+				+) sudo -u와 su -
+					sudo -u 사용자 : 현재 사용자가 다른 사용자 계정으로 특정 명령어를 실행할 때 사용
+					su - 사용자 : 현재 사용자가 완전히 다른 사용자 계정으로 전활할 때 사용
+
+					:	unix, linux 겸용 명령
+					.	linux 전용 명령
+					-	chgrp는 그룹만 변경
+					-	
+
+
+				20분
+				계정/그룹은 최대 4개까지
+				범위 : ~ 허가권까지
+
+					계정 : testA, testB, testC	UID : 2000, 2001, 2002
+					그룹 : groupA, groupB		GID : 2000, 2001
+					
+					groupA : testA, testB
+					groupB : testC
+
+					node 디렉토리 안에 있는 drivers_autoprobe 찾아서 /test1 에 복사 붙여넣기
+					파일 소유자는 변경 x
+					groupA인 유저들이 수정할 수 있게 권한 설정(sudo 사용 x)
+					groupB인 유저들은 읽기만 가능
+
+					testA 계정으로 파일 수정 후
+					testC 계정으로 내용 확인
+
+				3. 
+				그룹별로 허가권을 다르게 줘서 읽기, 쓰기, 접근 제한
+				
+
+				1팀 : 패치노트
+					0. 계정 만들기
+	   					계정명 : hoo
+   						그룹명 : hogwart
+						홈디렉토리 : /home/patch/note
+						PW : 1027
+					의 계정정보를 가진 계정을 하나 만드시오
+
+					1. alias 설정하기 
+						다음의 명령어를 단축기를 등록할 것
+						cp /etc/passwd /home/patch/note  > "copyF"로  설정할 것
+
+					2. copyF etc/passwd의 파일을 복사 해오시오.
+
+					3. vi 로 passwd를 열어서 15번 line에서 발표자의 오늘의 기분 작성하고  feeling.txt 이름으로 저장하기
+						!--별도의 지시가 있기 전까지 vi feeling.txt 에서 나가지 마시오. --!
+
+					4. feeling.txt를 /diary 폴더에 보존복사 하시오.
+
+					5. /diary 안에 있는 feeling.txt에 현재 문제푸는 본인의 이름을 첫번째 줄에 입력하시오.
+
+					6.  /diary/feeling.txt의 접근 권한을 -r-x-r-xr-x root   root 로 설정할 것.
+						!--vi를 종료하시오--!
+
+					7. hoo로 로그인하시오
+
+					8. /diary/feeling.txt를 여시오.

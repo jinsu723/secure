@@ -1,0 +1,567 @@
+day53
+
+0. 록키 리눅스 설치 iso 파일
+	https://rockylinux.org/ko-KR/download
+
+	DVD ISO : 전체 설치 이미지 제공
+		모든 패키지가 포함되어 있어 기본적인 설치와 다양한 소프트웨어가 포함된 설치
+
+	Boot ISO : 작고 가벼운 부팅용 ISO 파일
+		운영체제를 부팅하고 설치할 수 있는 최소한의 환경만 제공
+		네트워크 설치나 클라우드 환경에서 제공
+
+	Mininal ISO : 기볹걱인 시스템 설치에 필요한 최소한의 패키지만 포함된 ISO 파일
+		리소스를 적게 사용하며 시스템 자원을 절약하면서 설치 후 필요한 것만 설치할 수 있도록 함(사용자 맞춤형 설치)
+
+1. 록키 리눅스 설치
+	록키 리눅스 DVD.ISO 파일을 VM ware에 추가 후 진행
+
+	1) Install Rocky Linux 8.10 방향키로 선택 후 엔터
+	2) 한국어 > 계속 진행
+	3) 네트워크와 호스트 이름 > ens33 켬으로 변경 > 좌측 상단에 완료 버튼
+	4) 시간과 날짜 > 아시아 / 서울 / 네트워크 시간 켬 > 좌측 상단에 완료 버튼
+	5) 사용자 생성
+		성명 : sun
+		사용자 이름 : sun(자동으로 채워짐)
+		비밀번호 : qwer1234!
+		비밀번호 확인 : qwer1234!
+		좌측 상단에 완료버튼 2번 누르기
+	6) KDUMP > 비활성화(체크박스 체크 해제) > 좌측 상단에 완료 버튼
+		- kdump (커널덤프) : 시스템이 커널 패닉이나 심각한 오류로 충돌 시 메모리 덤프를 자동으로 수집하여 분석을 가능하게 하는 도구
+			시스템 관리자나 개발자가 시스템 장애의 원인을 빠르게 파악하고 문제를 해결하는 데 도움을 주는 도구
+			리눅스 시스템 장애 처리에 필수적인 기술
+	7) 소프트웨어 선택 > 서버 GUI 사용 > 레거시 UNIX 호환성 > 좌측 상단 완료버튼
+	8) 설치 목적지 > 저장소 구성 사용자정의 클릭 > 좌측 상단에 완료 버튼
+	9) 수동 파티션 설정 > 표준 파티션으로 변경 후 아래부분에 + 버튼 클릭
+		/boot	1GB ext4
+		/home	1GB ext4
+		/var		20GB ext4
+		/usr		40GB ext4
+		swap		8GB swap
+		/		30GB ext4
+		설정 완료 후 우측 하단에 모두 재설정 클릭 > 현재 설정 보존 클릭 > 우측 상단에 완료 버튼 클릭 > 변경요약 변경적용 클릭
+	10) 루트 비밀번호 설정
+		1234로 설정 > 우측 상단에 완료 버튼 클릭 2번 클릭
+
+====================> 우측 하단 설치 시작 버튼 활성화되면 설치 시작 버큰 클릭
+
+2. 싱글 부트 설정
+	1) 싱글 부팅 모드(Single User Mode)와 싱글 부트(Single Boot) 차이
+		- 싱글 부팅 모드
+			리눅스 운영체제가 유지보수나 문제해결을 위해 1인 모드로 실행되는 특별한 부팅 모드
+			root 계정만 접근 가능
+			싱글 부팅 모드를 사용하는 경우 : 루트 비밀번호를 잊어버려 로그인 할 수 없는 경우
+				부팅이 실패할 때 커널 로그를 확인해야 하는 경우
+				시스템 파일(fstab, passwd, shadow)이 잘못 되어 긴급 복구히야 하는 경우
+
+	2) 싱글 부팅
+		한 대의 컴퓨터에 하나의 운영체제만 설치해서 사용하는 방식
+		↔ 멀티부트(Multi Boot) : 여러 개의 OS를 하나의 컴퓨터에 설치하고 부팅 시 선택할 수 있음
+		싱글 부트가 필용한 경우 : 서버 환경에서 안정적인 운영이 필요할 때
+			특정 OS에 최적화된 작업을 수행할 때
+			OS 산택 없이 빠르게 부팅하고 싶을 때
+
+	3) 싱글 부팅 모드 진입 방법
+		GRUB 부팅 메뉴에서 싱글 부팅 모드로 진입
+		- 시스켐 재부팅
+		- GRUB 루트 로더 화면이 나타나면 부팅할 커널을 선택 하고 e키를 누른다
+			e를 누르게 되면 부트 설정을 편집할 수 있다
+
+		rhgb quiet 를 찾아서 지우고 rw init=/bin/bash로 작성 후 ctrl + x
+
+3. SELinux(Security-Enhanced Linux)
+	리눅스 시스템의 보안을 강화하게 위해 만든 강력한 보안 모듈
+
+	1) SELinux의 역할
+		단순한 파일 권한과 사용자 권한을 넘어서 보안정책을 적용할 수 있다
+
+	2) SELinux 기본 개념
+		MAC(강제 접근 제어) 방식을 사용한다
+		시스템 전체에 미리 정해진 보안 정책을 강제 적용하여 특정 프로세스나 사용자라도 허가되지 않은 작업을 못하도록 한다
+
+		(1) 기존 리눅스의 보안 모델
+			보안 방식
+			DAC(Discretionary Access Control, 임의 접근 제어)	기본적인 리눅스의 권한 관리(chmod, chown, shdo)
+			MAC(Mandatory Access Control, 강제 접근 제어)	SELinux가 적용하는 정책 기반 보안 모델
+
+			- SELinux가 없는 리눅스(DAC)
+				chmod 777 모든 사용자가 해당 파일에 접근 가능
+				root 사용자는 시스템의 모든 파일을 자유롭게 변경 가능
+
+			- SELinux가 있는 리눅스(MAC)
+				root 계정이라도 허가되지 않은 작업은 수행할 수 없음
+				웹 서버(Apache) 프로세서는 특정 디렉토리에만 접근 가능하도록 강제
+
+		(2) SELinux의 모드
+			Enforching(강제 적용)	SELinux 정책을 업격하게 적용
+								허용되지 않은 동작 차단
+			Permissive(허용 모드)	차단하지 않은 보안 로그를 기록하여 어떤 작업이 차단 될지 확인 가능
+			Disabled(비활성화)		SELinux가 완전히 꺼짐
+
+			현재 SELinux 상태 확인
+				sestatus
+
+		(3) SELinux 모드 변경
+			- 일시적으로 변경(재부팅 시 원래대로 돌아옴)
+				Permissive 모드로 변경	setenforce 0(테스트용)
+				Enforcing 모드로 변경	setenforce 1(보안적용)
+
+			- 영구적으로 모드 변경(재부팅해도 유지됨)
+				vi /etc/selinux/config
+
+				#SELinux=enforcing		#SELinux 보안 정책을 강제 허용
+				SELinux=disabled		#SELinux 기능을 완전히 비활성화
+
+				esc + :wq 저장하고 나가기
+
+		+) vi 에디터 단축키
+			yy		한 줄 복사
+			p		붙여넣기
+			dw		단어 삭제
+			yw		단어 복사
+			u		되돌리기
+			h j k l	왼쪽 아래쪽 위쪽 오른쪽
+
+		+)  비밀번호 변경
+			passwd
+			1
+			1
+			로 변경 후 시스템 재부팅
+			exec /sbin/init
+
+		재부팅 후 목록에 없습니까? 클릭 사용자 이름 root로 접속 > 1 입력 후 로그인
+		언어 선택 > 한국어 > 다음 > 다음 > 다음 > 건너뛰기 > RockLinux 시작하기 버튼 클릭
+		설정 완료 되면 시작하기 창 닫기
+
+4. 리눅스 특징
+	다양한 환경에서 사용되는 오픈소스 운영체제(OS)
+	대소문자를 구분		File.txt, file.txt는 다른 파일이다
+
+	모든 것은 파일			장치, 프로세스까지 파일 형태로 존재한다
+						/etc/passwd : 사용자 종보가 저장된 파일
+						/div/sda : 하드디스크 장치
+						/proc/cpuinfo : cpu 정보
+
+	확장자 제한 없음		실행 여부는 chmod + x (x는 실행 권한)에 따라 결정
+
+	다중 사용자 지원		여러 사용자가 동시에 사용 가능
+						각 사용자는 별도의 홈 디렉토리(/home/사용자명)를 가짐
+						root : 관리자 계정(모든 권한 가짐)
+						일반 사용자 : 제한된 권한을 가짐
+						시스템 사용자 : 서비스 실행을 위한 계정
+
+	파일 권한 중요			chmod, chown으로 권한 설정
+
+	다중 작업 가능			여러 개의 프로세스를 실행 가능
+						백그라운드 작업도 쉽게 실행 가능
+
+	패키지 관리 시스템		dnf, yum, apt 등으로 소프트웨어 설치
+						록키 리눅스 : dnf, yum
+
+	다양한 쉘 제공			bash, zsh, sh 등으로 다양한 쉘 지원
+
+	네트워크 기능			ping, ip a 등으로 네트워크 관리
+
+	다양한 배포판이 존재	RHEL, Debian, Arch 기반 등 여러 버전
+
+5. 기본 명령어 확인
+	- 현제 로그인 한 사용자 확인
+		# whoami
+
+	- 현재 시스템에 로그인 한 사용자 목록 확인
+		# who
+		root	seat0	2025-02-11 11:15	(login screen)
+		sun	tty2		2025-02-11 10:47	(tty2)
+		root tty3		2025-02-11 11:15	(tty3)
+
+		사용자명 터미널명 로그인시간	원격 또는 로컬 접속 정보
+
+		teat0 : GUI(그래픽) 로그인 화면
+		tty2 : CLI(터미널) 로그인
+
+	- 접속한 사용자의 프로세스 및 실행 정보 확인
+		#who -a
+		
+	- 사용자의 IP 또는 원격 접속 정보 확인
+		#who -H
+
+	- 실행중인 프로세스 목록 보기
+		#ps aux
+
+	- 특정 프로레스 종료
+		#kill <PID>
+
+	- 록키 리눅스에서 패키지 설치
+		#dnf insatall 패키지명
+
+	- 패키지 업데이트
+		#dnf update
+
+	- debian 계열(Upuntu) apt 패키지 관리자 사용
+		#apt install 패키지명
+
+	- 현재 사용중인 쉘 확인
+		#echo $SHELL
+
+	- 사용 가능한 쉘 확인
+		#cat /etc/shells
+
+	- IP 주소 확인
+		#ifconfig
+		#ip a
+
+	- 패스워드 변경
+		관리자(root)로 로그인한 경우
+			passwd 사용자명
+
+		일반 사용자로 로그인한 경우
+			자신의 비밀번호만 변경 가능
+			passwd
+
+		패스워드 규칙
+			관리지(root)는 기존 비밀번호 확인 없이 변경 가능
+			일반 사용자는 기존 비밀번호 확인 필요
+			최소 6자리 이상, 영문+숫자+특수문자 중 2가지 이상 조합
+
+6. 원격 접속 설정
+	원격접속을 통해 원격에서 서버를 관리할 수 있다
+	일반적으로 SSH(Secure Shell)프로토콜을 사용하여 클라이언트에서 PuTTy를 이용한다
+
+	1) putty 다운로드
+		https://www.chiark.greenend.org.uk/~sgtatham/putty/latest.html
+
+		MSI('Windows Installer')64-bit x86:
+		putty-64bit-0.830installer.msi 다운로드
+		설치 진행 후 putty 접속
+
+	2) putty 설정
+		- putty 실행
+
+		- Terminal -> Featuers에서 
+			Disable remote-controlled window title changing 체크
+
+		- windows -> Lines if scrollback
+			기본값 2000 -> 5000으로 설정(로그 기록 증가)
+
+		- Appearance -> Font Setting Change
+			Consolas, 글씨 크기 변경 18pt(가독성 향상)
+		- Translation -> UTF-8로 설정되어 있는지 체크
+
+		- Session
+			Host Name : [리눅스 서버 IP 입력]
+			리눅스에서 #ifconfig로 확인
+			ens33의 ip 입력
+			Saved Session : lockylinux 입력 후 save 클릭
+
+		- 저장된 세선 선택 후 open
+
+		- ssh 키 교환창 나오면 Accept 선택
+
+7. 록키리눅스 기본 명령어
+	명령어 사용 뒤 한 줄 띄어쓰기
+	하나의 경로는 절대 띄어쓰기 하지 않는다
+
+	- 현재 위치 확인(Prompt Working Directory)
+		pwd
+
+	- 비밀번호 변경
+		passwd
+
+	- 디렉토리 변경(Change Directory)
+		cd
+		cd /home/sun (지정 /home/sun)
+
+		[root@localhost ~]#pwd
+		/root
+		[root@localhost ~]#cd /home/sun
+		[root@localhost sun]#pwd
+		/home/sun
+
+		cd ./ (.현재 디렉토리를 의미, 현재 /home/sun)
+		cd ../ (.. 상위 디렉토리를 의미, 현재 /home)
+		cd ~ (/root)
+		cd ~sun (sun 계정의 홈디렉토리로 이동)
+		cd (최초 로그인 경로로 이동)
+
+	- /의 의미
+		디렉토리, 정보 저장소
+		문자열의 가장 앞의 /	최상위
+		문자열 중간의 /		dir 구분자
+		문자열 마지막의 /		생략 가능
+
+		. 	현재
+		..	상위(Parents, 부모 디렉토리)
+		~	홈(기본값 : 로그인 한 계정의 홈)
+
+	- 메뉴얼
+		man
+		나가기 : q
+		man ls
+
+	- 목록보기(List)
+		ls
+		옵션		-a : 숨김 파일 포함, 모두(all)
+				-l : 자세히(long format)
+				-R : 하위 디렉토리 끝까지(Recursive)
+				-d : 디렉토리 리스트
+
+	- 파일/디렉토리 구분법
+		d rwxrwxrwx : 디렉토리
+		- rwxrwxrwx : 파일
+		l rwxrwxrwx : 링크(바로가기)
+		c rwxrwxrwx : 특수문자 장치파일
+		b rwxrwxrwx : 블록 장치파일
+
+	- /etc/passwd
+		리눅스 시스템의 사용자 계정 정보를 저장하는 파일
+
+		cat /etc/passwd
+		사용자이름:암호:사용자ID(UID):그룹ID(GID):사용자정보:홈디렉토리:로그인쉘
+		root:x:0:0:root:/root:/bin/bash
+		sun:x:1000:1000:sun:/home/sun:/bin/bash
+
+	- /etc/shadow
+		사용자 비밀번호 정보를 암호화해서 저장하는 보안 파일
+		- --------- root만 접근 가능
+
+		cat /etc/shadow
+		사용자이름:암호해시:마지막변경일:최소사용일:최대사용일:경고일:비활성화일:계정만료일
+		root:$6$4kPQLDRWyKi.ob4i
+		$MngRhdDt1Ayq7HOu0IOaWFJ7VQAAff.kiQK7JC9qZDv.9BtalPt.BiWqEeph1JoefQrt/vvwAXebhckd15hww0
+		:20130		#1970년 1월 1일부터 20130일 째
+		:0
+		:99999		#비밀번호 변경 필요없음(무제한 사용가능)
+		:7			#만료 7일전 경고
+		:::			#계정 만료 없음
+
+		sun:$6$h3vvww96l.WQdBWW
+		$V8mN3Eu9g2vMtrh0dzdID5mjdaVba8IMCqAG7MDMjpBsA5h5rL8Wt3kpnSr5BZreS/iJC4YVlmbfF0UVKNOh0/
+		:20130:0:99999:7:::
+
+		시스템 계정(로그인 불가능)
+			*		비밀번호가 없음(로그인 불가능)
+			19767	비밀번호가 없는 시스템 계정
+			99999	변경 필요 없음
+
+		bin:*:19767:0:99999:7:::
+
+		!!가 포함된 계정(비활성화됨)
+			!!		비활성화된 계정
+			20130	마지막 변경일
+			::::::		다른 정책 없음
+
+		sshd:!!:20130::::::
+		avahi:!!:20130::::::
+		tcpdump:!!:20130::::::
+
+	- 파일 내용을 출력하거나 파일을 연결할 때 사용
+		#cat 파일내용
+
+		욥션
+		-n		출력되는 줄 번호 표시
+		-b		빈 줄은 제외하고 줄 번호 표시
+		-s		연속된 빈 줄을 하나로 줄임
+		-E		각 줄 끝에 $표시(줄바꿈 확인)
+		-T		탭(Tab) 문자를 ^I로 표시
+
+	2) 폴더 생성
+		- 디렉토리 생성 명령어(Make Directory)
+			mkdir
+			옵션
+			-p : 필요한 경우 누락된 상위 디렉토리도 생성
+
+		+) /home/lost+found	파일 시스템 복구용, root 전용
+
+			[root@localhost home]# mkdir ./test/a/b
+			mkdir: `./test/a/b' 디렉토리를 만들 수 없습니다: 그런 파일이나 디렉터리가 없습니다
+
+			해결 방법 1) teset 폴더 내 a 폴더를 만들고 a 폴더 하위에 b라는 폴더를 만든다
+				[root@loclahost test]# mkdir ./a
+				[root@localhost test]# mkdir ./a/b
+
+				[root@localhost test]# ls -alR /home/test
+				/home/test:
+				합계 12
+				drwxr-xr-x  3 root root 4096  2월 11 14:42 .
+				drwxr-xr-x. 5 root root 4096  2월 11 14:38 ..
+				drwxr-xr-x  3 root root 4096  2월 11 14:42 a
+
+				/home/test/a:
+				합계 12
+				drwxr-xr-x 3 root root 4096  2월 11 14:42 .
+				drwxr-xr-x 3 root root 4096  2월 11 14:42 ..
+				drwxr-xr-x 2 root root 4096  2월 11 14:42 b
+
+				/home/test/a/b:
+				합계 8
+				drwxr-xr-x 2 root root 4096  2월 11 14:42 .
+				drwxr-xr-x 3 root root 4096  2월 11 14:42 ..
+
+			해결 방법 2) a라는 폴더가 없기 때문에 발생한 문제로 -p 옵션을 적용하여 a/b 폴더를 함께 만든다
+				[root@localhost test]# mkdir -p ./c/d
+
+
+				[root@localhost test]# ls -alR
+				.:
+				합계 12
+				drwxr-xr-x  3 root root 4096  2월 11 05:42 .
+				drwxr-xr-x. 5 root root 4096  2월 11 05:38 ..
+				drwxr-xr-x  3 root root 4096  2월 11 05:42 a
+
+				./a:
+				합계 12
+				drwxr-xr-x 3 root root 4096  2월 11 05:42 .
+				drwxr-xr-x 3 root root 4096  2월 11 05:42 ..
+				drwxr-xr-x 2 root root 4096  2월 11 05:42 b
+
+				./a/b:
+				합계 8
+				drwxr-xr-x 2 root root 4096  2월 11 05:42 .
+				drwxr-xr-x 3 root root 4096  2월 11 05:42 ..
+				[root@localhost test]# pwd
+				/home/test
+				[root@localhost test]# ls
+				a
+				[root@localhost test]# mkdir -p ./c/d
+
+				[root@localhost test]# ls -alR ./c/d
+				./c/d:
+				합계 8
+				drwxr-xr-x 2 root root 4096  2월 11 05:45 .
+				drwxr-xr-x 3 root root 4096  2월 11 05:45 ..
+
+				※ 한 번 생성된 디렉토리는 덮어쓰기가 되지 않는다
+				[root@localhost test]# mkdir ./c/d
+				mkdir: 
+
+	3) 절대경로
+		/ 최상위가 기준이 되는 경로
+
+			명령 실행			결과(pwd)
+		cd /home/test/c/d		/home/test/c/d
+		cd /home/test			/home/test
+		cd /					/
+		cd /home/sun/a		/home/sun/a
+		cd /home/sun2/a		/home/sun2/a
+		cd /home/sun2/A/b		/home/sun2/A/b
+		cd /home/sin2/ a/b		오류발생(띄어쓰기)
+
+	4) 상대경로
+		. 현재 경로가 기준이 되는 경로
+		./ 생략 가능
+		.. => ./../ 현재 폴더 기준으로 상위 디렉토리 경로
+
+		pwd => /home/test/c/d
+			명령 실행			pwd 결과
+			cd ./				/home/test/c/d
+			cd ../			/home/teset/c
+			cd ../../			/home
+			cd test			/home/test
+			cd /home/test2	/home/test2
+
+		pwd => /home/teset2
+		ls -R => . /a	b
+			     . /a/b
+			     . /b/c
+
+			/home/test2/a/b
+			/home/test2/b/c
+
+			cd a/c	X
+			cd a		/home/test2/a
+			cd c		X
+
+		기본경로는 상대경로
+		문자열 바로 앞에 /가 존재시에는 절대경로, 그 외에는 상대경로
+
+	5)시간 확인
+		date
+		2025. 2. 11 (화) 15:39:00 KST
+		세계 협정시 UTC
+
+		- 사용 가능한 티임존 목록 확인
+			timedatectl list-timezones | grep Asia/Seoul
+
+		- 타임 존 변경(한국 시간으로 설정)
+			timedatectl set=timezpme Asoa/Seoul
+
+		- 수동으로 변경
+			timedatact set-time "2025-2-11 15: 25:45
+
+	6) 시스템 정보 확인
+		uname
+		uname -r 커널버전 확인
+		uname -a
+
+	7) 달력 보기
+		cal
+		cal 월 년도
+		cal 년도
+
+------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+[실습]
+	1. 기본 디렉토리 생성
+		1) 현재 위치를 확인하는 명령어 입력
+		2) /home/sun 디렉토리에 projects 디렉토리 생성
+		3) projects 디렉토리 안에 linux, java, web 디렉토리 생성
+		4) 절대 경로를 사용하여 linux 디렉토리로 이동하는 명령어 입력
+		5) 현재 디렉토리 이동하는 명령어 입력
+		6) 상대경로를 사용하여 java 디렉토리로 이동하는 명령어 입력
+		7) 상대경로를 사용하여 project 다이렉토리로 이동하년 명령어 입력
+		8) 한 번의 명령어로 project/web 다렉토리 안에 html, css, js 폴더 생성
+		9) project 하위의 모든 디렉토리 파일 확인하는 명령어 입력
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+8. 파일 생성
+	1) 비어있는 파일(0byte) 생성
+		touch 경로
+
+		디렉토리는 생성되지만 파일 생성은 되지 않는다
+		+) mkdir a/
+			touch aa/
+
+		현재 fileTest 폴더
+			mkdir /home/A B ./C
+			touch /home/A/11 B/22 ./C/33
+
+	2) echo "내용" > 파일명
+		기존 파일이 있으면 덮어씀
+		파일명의 파일 생성되고 "내용"이 해당 파일에 저장됨
+
+		echo -n "" > 파일명
+		빈 파일로 생성됨
+
+	3) > 리다이렉션을 사용한 파일 생성
+		> 파일명1 > 파일명2 > 파일명3
+		비어있는 여러 개의 파일도 생성 가능
+
+	4) cat 명령어를 통한 파일 생성
+		cat > 파일입력
+		내용 입력
+		ctrl + D
+
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+[실습]
+	/koreait와 /cptest를 생성하고
+	/koreait에는 1 2 3 4개의 파일과 a b c d라는 4개의 디렉토리 생성
+	/cptest로 이동하여 pwd 입력시 /cptest를 출력하기
+-------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+9. 파일 복사k(copy)
+	cp 기존 경로 이동할 경로
+	옵션
+	-r 디렉토리 복사
+	-p 보존복사(속성)  // 생성된 시간도 복사
+	-i 확인(y/n)  // 이미 파일이 존재할 경우 덮어쓰기 여부 선택
+	-a 모든 옵션 포함
+
+10. 파일 이동, 파일 이름 변경 (move)
+	mv	파일이나 디렉토리를 이동하거나 이름을 변경할 때 사용
+
+	파일/디렉토리 이름 변경 시
+	mv 기존파일명 새로운파일명
+
+	파일 이동 시
+	mv 기존파일명(경로) 이동할경로
+
+	-v 이동할 경로

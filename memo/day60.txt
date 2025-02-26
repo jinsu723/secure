@@ -1,0 +1,263 @@
+day60
+
+3계층(라우터 기본 설정) -> 3Way_Handshake -> 실습문제 -> 시험공부
+
+0. 네트워크 장비 계층 및 차이점
+
+	장비		동작계층		기능													차이점
+	==============================================================================================================================
+	리피터	1계층		신호를 증폭하여 전달, 중계								신호를 단순히 증폭하여 먼 거리까지 전송
+						1개의 포트 입출력만 존재
+
+	허브		1계층		모든 포트에 데이터를 브로드캐스트(전송)						단순 데이터 전송(모든 포트로 전송)
+						네트워크 충돌 발생 가능성이 큼 -> CSMA/CD방식 사용
+						여러 포트가 존재하지만 모든 포트로 데이터를 뿌리는 방식
+
+	브릿지	2계층		MAC 주소 기반으로 네트워크를 구분하여 전송					2개의 네트워크를 MAC 주소 기반으로 연결
+						2개의 네트워크를 연결하며 필요할 때만 데이터를 전달
+
+	스위치	2계층		MAC 주소 기반으로 목적지 포트로만 데이터 전송(유니캐스트)		데이터 충돌 방지 및 빠른 전송
+			(일부 3계층)	충돌 발생하지 않으며 허브보다 빠르고 안정적
+
+1. Router(라우터)
+	1) 라우터란
+		네트워크 계층(3계층)에서 동작하는 장비
+		서로 다른 네트워크를 연결해주는 장비
+		네트워크 간 데이터를 전달할 때 가장 적절한 경로를 선택하는 과정 라우팅(Routing)
+		네트워크 간 연결을 위해 출입구 역할을 하는 것이 게이트웨이(Gateway)
+
+	+) 스위치 vs 라우터
+						스위치					라우터
+		계층				2계층(MAC 주소)			3계층(IP 주소)
+		기능				같은 네트워크 내 데이터 전달	네트워크 간 데이터 전달
+		주소				MAC						IP
+		브로드캐스트 범위	동일한 네트워크			다른 네트워크로 제한
+
+	+) 라우팅(Routing)
+		라우터가 최적의 경로를 선택하여 데이터를 전송하는 과정을 의미
+			- 정적 라우팅(Static Routing)
+				관리자가 직접 경로 설정
+				작은 네트워크에서 사용됨(설정 변경 시 수동 수정 필요함)
+
+			- 동적 라우팅(Dynamic Routin)
+				라우터가 자동으로 네트워크 상태를 학습하고 최적 경로 설정
+				네트워크 규모가 클 때 효율적
+				동적 라우팅 프로토콜 : RIP, OSPF, EIGRP, BGP
+
+	2) 라우터의 특징
+		여러 개의 네트워크 IP를 설정할 수 있지만 한 네트워크 당 1개의 IP 설정 가능
+		PC가 다른 네트워크와 통신하려면 게이트웨이가 필요
+		PC의 게이트웨이 IP 주소는 같은 네트워크 내 라우터의 IP로 설정해야함
+		ex) 라우터 IP : 192.168.1.1
+			PC의 게이트웨이 설정 : 192.168.1.1(라우터의 IP와 동일)
+			PC의 IP : 192.168.1.100(라우터와 중복되면 안됨)
+
+	3) 라우터 장비 모드
+		- 유저 모드(User Mode)
+			가장 기본적인 모드,일반 사용자가 접근 가능
+			장비 설정 변경할 수 없음(읽기 전용)
+
+			Router >
+
+		- 관리자 모드 #
+			네트워크 장비의 상태를 확인할 수 있음
+			설정 변경은 불가능하지만 진단 및 명령 실행 가능
+
+			UserMode에서 enable 명령어 입력하면 관리자모드 이동 가능
+			Router > enable
+			Router#
+
+		- 설정 모드(Global Configuration Mode) (config)
+			장비의 네트워크 설정을 변경하는 모드	
+			관리자 모드에서 configuer terminal 입력하면 진입
+
+			Router# configuer terminal
+			Router(config)#
+
+	4) 라우터 기본 명령어
+		?							사용 가능한 명령어 목록 조회
+		exit							한 단계 아래 모드로 이동
+		enable						관리자 모드로 진입
+		configure terminal				설정 모드로 진입
+		show ip interface brief			현재 장비의 IP 설정 확인
+		copy runnig-config startup-config	현재 설정을 저장
+
+		- tab 키 자동완성
+			Router# show ip int bri	show ip interface brief
+
+		- 중복되는 명령어가 없으면 2 ~ 3글자만 입력 실행 가능
+			Router# sho ip in br
+
+	5) 패킷트레이서 명령어
+		라우터, 스위치, PC 3개 추가
+			- Router 2621XM
+			- Switch 2960
+			- End Device PC 3개 추가
+
+		케이블 연결
+			PC <-> Switch : 직선 케이블
+			Switch <-> Router : 직선 케이블
+			Router <-> Router or 외부 네트워크 : 크로스 케이블 (---)
+
+		PC에 IP 설정
+			- PC0
+				IP 주소 : 192.168.10.10
+				서브넷 마스크 : 255.255.255.0
+				기본 게이트웨이 : 192.168.10.1
+
+			- PC1
+				IP 주소 : 192.168.10.20
+				서브넷 마스크 : 255.255.255.0
+				기본 게이트웨이 : 192.168.10.1
+
+			- PC2
+				IP 주소 : 100.100.100.100
+				서브넷 마스크 : 255.0.0.0
+				기본 게이트웨이 : 100.100.100.1
+
+		스위치 포트 활성화
+			Switch > CLI
+			Switch > enable
+			Switch# configure terminal
+			Switch(config)# interface fastEthernet 0/3
+			Switch(config-if)# no shutdown
+			Switch(config-if)# exit
+
+		라우터 CLI 설정
+			초기 설정 질문 no 입력 후 엔터
+
+			- 관리자 모드 진입
+				Router > enable
+				Router#
+
+			- 글로벌 설정 모드(라우터의 네트워크 설정을 위함)
+				Router# configure terminal
+				Router(config)#
+
+			- 인터페이스 설정(IP 주소 할당)
+				Router(config)# interface fastEthernet 0/1  # 인터페이스 선택
+				Router(config-if)# ip address 192.168.10.1 255.255.255.0  # ip 주소 및 서브넷 마스크 설정
+				Router(config-if)# no shutdown  # 포트 활성화
+				Router(config-if)# exit
+
+				Router(config)# interface fastEthernet 0/2  # 인터페이스 선택
+				Router(config-if)# ip address 192.168.10.1 255.0.0.0  # ip 주소 및 서브넷 마스크 설정
+				Router(config-if)# no shutdown
+				Router(config-if)# exit
+
+			- 설정 저장
+				Router# copy running-config startup-config  # 현재 설정을 저장하여 재부팅 후에도 유지됨
+				Destination filename [startup-config]? (Enter)
+
+			- 연걸 확인
+				PC0 -> PC2 ping 테스트
+				응답 오면 정상 연결됨
+
+2. 포트
+
+	1계층(물리 계층, Physical Layer) : 케이블 등의 물리적인 전송매체
+
+	2계층(데이터링크 계층, DataLink Layer) : MAC(Media Access Control) 주소 기반 통신
+
+	3계층(네트워크 계층, Network Layer) : IP, ICMP, ARP, RARP 등의 프로토콜을 사용하여 네트워크 간 통신 수행
+
+	4계층(전송 계층, Transport Layer) : TCP, UDP를 이용하여 어플리케이션 간 데이터 전송
+
+	1) Port(포트) 개념
+		특정 서비스와 프로세스를 구분하는 전용 통신 회선
+		port 개수 : 2¹⁶ = 65536개(0 ~ 65535) TCP/UDP 따로 존재
+
+	2) Port 종류
+		- Well-known Port(잘 알려진 포트)
+			범위 : 0 ~ 1023
+			일반적으로 사용되는 서비스로 예약된 주소(HTTP, HTTPS, SSH)
+
+		- Resistered Port(등록된 포트)
+			범위 : 1024 ~ 49151
+			특정 응용 프로그램에서 사용하도록 할당된 포트(oracle 1521)
+
+		- Dynamic Port(동적 포트)
+			범위 : 49152 ~ 65535
+			사용자 마음대로 사용, 동적으로 지정되는 주소
+
+	3) 주요 Port 및 서비스
+		포트 번호			프로토콜			서비스
+		==========================================================================================
+		22/tcp			SSH				보안 원격 접속			터미널 접속 및 원격 제어
+		23/tcp			Telnet			원격 접속				비암호화된 터미널 접속
+		80/tcp			HTTP			웹서버				웹 사이트 접속
+		443/tcp			HTTPS			보안 웹서버			SSL/TLS 암호된 웹 접속
+		21/tcp			FTP				파일 송수신 서버		명령/제어 포트
+		20/tcp			FTP(Active Data)	Active 모드 데이터 전송	FTP에서 데이터 전송용
+		1024 ~ 랜덤/tcp	FTP(Passive Data)	Passive 모드 데이터 전송	클라이언트 데이터 포트 지정
+		139/tcp			NetBIOS			삼바포트(파일 공유)		Windows 파일 공유
+		25/tcp			SMTP			메일 서버 송신			이메일 전송
+		110/tcp			POP3			메일 서버 수신			이메일 다운로드
+
+		53/udp			DNS				도메인 네임 시스템		IP 주소 -> 도메인 변환
+		67/udp			DHCP Server		동적 IP 할당			클라이언트에게 IP 제공
+		68/udp			DHCP Client		동적 IP 요청			DHCP 서버에게 IP 요청
+		69/udp			TFTP			간단한 파일 전송		FTP보다 가벼운 전송 프로토콜
+		123/udp			NTP				네트워크 시간 동기화	시간 서버와 동기화
+		161/udp			SNMP			네트워크 관리			네트워크 장비 모니터링
+		500/udp			IKE				UPsec VPN 키 교환		VPN 연결을 위한 키 관리
+		514/udp			Syslog			시스템 로그			원격 로그 전송
+		520/udp			RIP				라우팅 정보 프로토콜	동적 라우팅
+		33434/udp ~		Tranceroute		네트워크 경로 추적		네트워크 지연 확인
+
+3. 4계층 TCP 3-Way Handshake
+	TCP(Transmission Control Protocol)는 신뢰성 있는 연결을 위해 3-way handshake 과정을 사용
+
+	1) 3-Way Handshake 과정
+		① SYN(Synchronize) - 연결 요청
+			클라이언트 -> 서버로 SYN 패킷 전송
+			클라이언트는 초기 시퀀스 번호(ISN, Initial Sequence Number) 포함
+
+		② SYN + ACK(Acknowledgment) - 연결 시작
+			서버 -> 클라이언트로 SYN + ACK 패킷 전송
+			서버도 자신의 ISN 포함하여 응답
+
+		③ ACK(Acknowledgment) - 연결 완료
+			클라이언트 -> 서버로 ACK 패킷 전송
+			연결이 설정되고 데이터 전송 시작 가능
+
+	2) 4-Way HandShake(TCP 연결 종료)
+		① FIN - 연결 종료 요청
+			클라이언트 -> 서버로 연결 요청 종료 요청
+
+		② ACK - 확인 응답
+			서버 -> 클라이언트
+
+		③ FIN - 서버도 연결 종료 요청
+			서버 -> 클라이언트
+
+		④ ACK - 확인 응답 후 연결 종료
+			클라이언트 -> 서버
+
+------------------------------------------------
+실습
+	1. 두 대의 PC를 HUB로 묶고 ping 보내기
+		어떤 선으로 연결하는지와 어떤 클래스인지 작성
+		192.168.1.10	192.168.1.20
+
+	2. 두 대의 PC를 Switch로 묶고 ping 봰기
+		어떤 식으로 연결하는지와 어떤 클래스인지 작성
+		172.16.10.10	172.16.10.20
+
+	3. 두 대의 PC를 Router로 묶고 ping 보내기
+		어떤 선으로 연결하는지와 어떤 클래스인지 작성
+		10.0.0.10	20.10.20.30
+
+	4. 4대의 PC를 네트워크 그룹별로 2개의Switch로 엮은 뒤 하나의 라워터에 각각 연결하기
+		게이트웨이는 자유
+		20.0.0.10	20.0.0.10	30.0.0.10	30.0.0.20
+
+	5. 아래 내용으로 보고 통신이 가능하도록 연결하기
+		게이트웨이는 자유
+
+			번호	A			B			C			D
+			1	172.16.10.10	172.20.0.10
+			2	172.10.20.30	175.10.20.30
+			3	121.60.20.30	172.15.20.40
+			4	10.20.30.40	192.168.10.20	10.60.40.50
+			5	192.168.10.20	192.168.10.30	192.168.20.5	192.168.20.10

@@ -1,0 +1,428 @@
+day62
+
+tcp 재전송 요구 -> 헤더 -> 록키 리눅스 네트워크 설정 -> GNS -> Static 라우팅
+
+1. tcp 재전송 요구
+	1) TCP 윈도우 슬라이딩(Window Sliding)
+		TCP는 한 번에 수신받는 메시지의 개수를 제한하는데 이를 슬라이딩 윈도우라고 한다
+		흐름 제어(Flow Control)와 오류 제어(Error Control)를 함께 수행하여 네트워크 혼잡을 방지하고 데이터 전송을 보장한다
+			- 윈도우 크기(Window Size) : 송신자가 한 번에 전송할 수 있는 데이터의 크기
+			- ACK(확인 응답, Acknowledgment) : 수신자가 정상적으로 받은 데이터에 대한 응답
+
+			* 윈도우의 크기가 크면 한 번에 많은 데이터를 보낼 수 있지만 손실 발생 시 재전송 비용이 커짐
+			* 윈도우 크기가 작으면 네트워크 안정적이지만 속도가 느려짐
+
+	2) TCP 자동 재선송 요구(ARQ, Automatic Repeat reQuest)
+		(1) Stop & Wait ARQ(정지 - 대기)
+			한 번에 하나의 패킷만 전송하고 응답(ACK)을 기다렸다가 다음 패킷을 전송하는 방식
+
+			* 단점 : 속도가 느리고 네트워크 대역폭을 낭비함
+
+			- 동작 방식
+				송신자는 패킷1을 전송하고 수신자의 ACK를 기다림
+				수신자가 패킷을 받으면 ACK(확인 응답)을 보냄
+				송신자는 ACK를 받으면 다음 패킷을 전송함
+				만약 패킷이 손신되면 타임아웃(Timeout) 발생 후 재전송
+
+			- ex)	
+				송신자 -> (패킷1) -> 수신자
+				송신자 <- (ACK1) <- 수신자
+				송신자 -> (패킷2) -> 수신자
+				송신자 -> (ACK2) -> 수신자
+				(패킷3 손실)
+				타임아웃 발생
+				송신자 -> (패킷3 재전송) -> 수신자
+				송신자 <- (ACK3) <- 수신자
+
+		(2) Go-Back-N ARQ(윈도우 슬라이딩)
+			송신자는 일정량(윈도우 크기)만큼 패킷을 연속으로 전송하지만 오류 발생 시 해당 패킷 이유 모든 패킷을 다시 전송
+			수신자는 순차적으로 올바른 데이터만 수락하며 중간에 오류가 있으면 해당 오류 이후 패킷을 모두 버림
+
+			* 단점 : 한 패킷만 손실되어도 이후 모든 패킷을 재전송해야 하므로 비료율적
+			* 장점 : 구현이 상대적으로 간단하여 네트워크 환경이 안정적일 경우 성능이 좋음
+
+			- 동작 방식
+				송신자는 윈도우 크기(N)만큼 데이터 전송
+				수신자는 ACK를 보냄, 중간 패킷이 손실되면 이후 모든 패킷을 무효화
+				최초 손실된 패킷을 다시 전송하면 이후 패킷도 함께 재전송
+
+			- ex)
+				윈도우 크기 : 4
+				송신자 -> (패킷1, 2, 3, 4) -> 수신자
+				송신자 <- (ACK 1, 2, 3) <- 수신자
+				(패킷4 손실)
+				송신자 타임아웃 발생
+				송신자 -> (패킷4, 5, 6, 7) -> 수신자
+
+		(3) Selective Repeat ARQ(윈도우 슬라이딩)
+			패킷이 손실되었을 때 해당 패킷만 전송하고 나머지 정상 패킷은 수신자의 버퍼에 저장하는 방식
+			네트워크 대역폭을 더 효율적으로 사용하지만 구현이 복잡함
+
+			* 단점 : 패킷을 버퍼에 저저장하고 관리해야 하므로 구현이 복잡함
+			* 장점 : 손실된 패킷만 재전송하므로 GO-Back-N 보다 효율적
+
+			- 동작 방식
+				송신자는 윈도우 크기만큼 패킷을 전송
+				수신자는 올바른 패킷을 버퍼에 저장하고 ACK를 전송
+				손실된 패킷이 있으면 해당 패킷만 재전송 요청(Selective ACK)
+				송신자는 요청받은 패킷만 다시 보냄
+
+			- ex)
+				윈도우 크기 : 4
+				송신자 -> (패킷1, 2, 3, 4) -> 수신자
+				송신자 <- (ACK1, 2) <- 수신자
+				(패킷3 손실)
+				송신자 -> (패킷5, 6, 7, 8) -> 수신자
+				송신자 <- (ACK5, 6, 7, 8) <- 수신자
+				수신자는 송신자에게 패킷3이 유실됨을 알림
+				송신자 -> (패킷3 재전송) -> 수신자
+				송신자 <- (ACK3) <- 수신자
+
+2. 와이어샤크 확인
+	Selective Acknowledgment(SACK) 패킷
+
+	필터
+		- tcp.options.sack : SACK 패킷만 확인
+			=> Selective Acknowledgment 옵션이 포함된 TCP 패킷 확인 가능
+
+		- tcp.analysis.lost_segment : 
+
+	1) 주요 패킷 정보
+		Source(출발지) : 여러 IP 주소
+		Destination(목적지) : 사용자의 로컬 IP 주소
+		Protocol : TCP
+		Length : 길지 byte
+		INFO : [ACK] Seq=1 Ack=2 Win=1046 Len=0 SLE=1 SRE=2
+			SLE=1 SRE=2 : SACK 옵션을 활용하여 특정 범위의 데이터만 수신 확인하고 있음을 나타냄
+			SLE(Selective Left Edge) : 수신자가 정상적으로 수신한 패킷 범위의 왼쪽 경계값(첫 번째 정상적으로 받은 바이트)
+			SRE(Selective Right Edge) : 수신자가 정상적으로 수신한 패킷 범위의 오른쪽 경계값(마지막 정상적으로 받은 바이트)
+
+	2) Selective Acknowledgment(SACK) 옵션
+		TCP에서 패킷이 유실될 경우, 일반적으로 Go-Back-N 방식을 사용하면 손실된 패킷 이후의 모든 데이터를 다시 보내야 함
+		손실된 패킷만 재전송하여 불필요한 네트워크 사용을 줄일 수 있다
+
+3. IP Header(체크섬 존재)
+	1) Version(IP 버전)
+		4bit IPv4, IPv6인지 결정
+
+	2) IHL(Internet Header Length)
+		IPv4 헤더의 길이(32비트 워드 단위, 1워드 = 4byte)
+		기본값 : 5(20byte)
+
+	3) Type of Service(TOS)
+		QoS(서비스 품질)이나 트래픽 우선순위를 지정하는 필드
+
+	4) Total Length
+		헤더 + 데이터의 총 크기(바이트 단위)
+		최대값 : 65535 바이트(2^16 - 1)
+
+	5) Identification
+		단편화된 패킷을 구별하는 ID
+
+	6) IP Flags(단편화 관련 플래그)
+		x						예약됨(보통 0)
+		D(Don't Fragment, 0x40)		1이면 패킷 단편화 금지
+		M(More Fragments, 0x20)	1이면 뒤에 더 많은 단편이 있음
+
+	7) Fragment Offset
+		패킷 단편화 시 현재 조각이 원본 데이터의 어디에서 시작하는지로 나타냄
+		단위 : 8byte(0, 8, 16, ... 식으로 증가)
+
+		+) IPv4에서 전송할 패킷이 MTU(Maximum Transmission Unit, 최대 전송 담위)보다 크면
+
+		+) 1500바이트 MTU 제한이 있는 네트워크에서 4000바이트 데이터그램을 전송한다
+			IPv4 헤더 : 20byte
+			전송할 데이터 크기 : 4000byte
+			MTU 제한 : 1500byte -> 각 프래그먼트 1480 바이트(1500 - 20)를 포함
+
+						Gragment Offset Payload 크기	More Fragment(MF)Flag
+			첫 번쨰 조각 fragment offset = 0	1480			1
+			두 번째 조각 1480 / 8 = 185		1480			1
+			세 번쨰 조각 2960 / 8 = 370		1480			0
+
+	8) TTL(Time To Live)
+		패킷의 생존 시간(Hop 제한)
+		라우터를 지날 때마다 1씩 감소 -> 0이 되면 폐기
+
+		window 기본 TTL : 128(목적지까지 최대 128개의 라우터를 거칠 수 있음)
+		linux/unix : 64
+
+	9) Protocol
+		상위 계층의 프로토콜 식별
+
+	10) Header Checksum
+		헤더의 오류를 검출하기 위한 체크섬
+		데이터는 포함하지 않음(TC/UDP 데이터 오류 검출)
+
+	11) Source Address & Destination Address
+		출발지와 목적지 IPv4 주소
+
+	12) Option(선택적 필드)
+		보안, 라우팅, 타임스탬프 등의 기능을 제공
+		기본 헤더 크기(20byte)이상일 때 존재
+
+4. ARP(Address Resolution Protocol) 패킷 구조 분석
+	IP 주소를 MAC 주소로 변환하는 역할
+
+	1) Hardware Type(2byte)
+		어떤 네트워크에서 사용되는지를 지정
+		0x0001(이더넷)
+		0x0006(IEEE 802 네트워크)
+		0x000F(프레임 릴레이)
+
+	2) Protocol Type(2byte)
+		ARP가 어떤 프로토콜의 주소를 변환하는지를 의미
+		0x0800(IPv4)
+		0x86DD(IPv6)
+		0x0806(ARP 패킷)
+
+	3) Hardware Address Length(1byte)
+		MAC 주소의 길이 지정
+		이더넷 환경에서는 항상 6(byte)
+
+	4) Protocol Address Length(1byte)
+		프로토콜의 길이 지정
+		IPv4에서는 항상 4(byte)
+
+	5) Opcode(2byte)
+		ARP 요청인지 응답인지 나타냄
+		0x0001(ARP Request)
+		0x0002(ARP Reply)
+		0x0003(RARP Request)
+		0x0004(RARP Reply)
+
+	6) Source Hardware Address(6byte)
+		ARP 요청을 보낸 장치의 MAC 주소
+
+	7) Source Protocol Address(4byte)
+		ARP 요청을 보낸 장치의 IP 주소
+
+	8) Destination Hardware Address(6byte)
+		대상 장치의 MAC 주소
+		ARP Request(요청) 시에는 00:00:00:00:00:00으로 설정됨(모름)
+		ARP Reply(응답)에서만 채워짐
+
+	9) Destination Protocol Address(4byte)
+		ARP 요청 대상의 IP 주소
+
+	+) ARP Request => 브로드케스트
+		ARP Reply => 유니케스트
+
+5. ICMP(Internet Control Message Protocol) 패킷 구조
+	IP 네트워크에서 오류 메시지를 전달하거나 네트워크 상태를 확인할 때 사용
+	8byte의 기본 헤더로 구성
+
+	1) Type(1byte)
+		ICMP 메시지의 기본 유형을 나타냄
+
+		0	Echo Reply			ping 응답
+		3	Destination Unreachable	목적지 도달 불가(세부코드 Code 필드로 구분)
+		5	Redirect				경로 변경 요청
+		8	Echo Request			ping 요청
+		11	Time Exceeded		TTL  초과로 패킷 폐기
+		12	Parameter Problem		잘못된 헤더 필드로 인한 오류
+		13	Timestamp			타임스탬프 요청
+
+	2) Code(1byte)
+		Type과 함께 ICMP 메시지의 세부 정보를 나타냄
+
+		0	네트워크에 도달할 수 없음
+		1	호스트에 도달할 수 없음
+		2	프로토콜에 도달할 수 없음
+		3	포트에 도달할 수 없음
+
+	3) Checksum(2byte)
+		ICMP 헤더와 데이터를 포함하는 오류 검출 필드
+		ICMP 메시지가 손상되었는지 확인하기 위해 사용됨
+
+	4) Other message specific information(4byte)
+		메시징 유형에 따라 다르게 사용됨
+
+6. TCP(Transmission Control Protocol) 헤더 구조 분석
+	신뢰성이 필요한 데이터 전송을 위한 프로토콜
+	20byte
+
+	1) Source Port(2byte)
+		송신자(출발지)의 포트 번호
+		0 ~ 65535 범위
+
+	2) Destination Port(2byte)
+		수신자(목적지)의 포트 번호
+		ex) 웹서버(HTTPS) : 443
+			SSH : 22
+
+	3) Sequence Number(4byte)
+		송신자가 전송한 첫 번째 바이트의 순서 번호
+		데이터 조각화 및 순서 맞추기 위해 사용
+
+	4) Acknowledgment Number(4byte)
+		이전 패킷을 정상적으로 받았음을 알리는 번호
+		(수신한 마지막 바이트 번호 +1)을 보냄
+
+	5) Data Offset(Header Length)(4bit)
+		TCP 헤더의 길이(옵션 필드 포함)
+
+	6) Reversed(3bit)
+		현재 사용하지 않으며 항상 0
+
+	7) Flags(제어 플래그 9bit)
+		TCP 연결 및 데이터 흐름을 제어하는 9개의 플래그 비트
+
+		C	CWR(Congestion Window Reduced)	혼잡 제어를 위해 사용
+		E	ECE(ECN-Echo)				네트워크 혼잡 방지
+		U	URG(Urgent)					긴급 데이터 포함 여부
+		A	ACK(Acknowledgment)			응답(ACK) 포함 여부
+		P	PSH(Push)						데이터 즉시 전송(버퍼 사용X)
+		R	RST(Rest)					연결 초기화(강제종료)
+		S	SYN(Synchronize)				연결 요청(3wah-handshake)
+		F	FIN(Finish)					연결 종료 요청
+
+		SYN : 연결 요청(SYN=1, ACK=0)
+		SYN + ACK : 연결 승인(SYN=1, ACK=1)
+		FIN + ACK : 연결 종료 요청(FIN=1, ACK=1)
+		RST : 비정상적인 연결 종료(RST=1)
+
+		※ 면접 질문
+			TCP의 연결 과정과 끊는 과정에 대해 설명하세요
+
+	8) window 크기(2byte)
+		흐름 제어에서 사용
+		송신자가 수신자로부터 한 번에 받을 수 있는 데이터 크기(버퍼 크기)
+
+	9) checksum(2byte)
+		패킷이 손상되었는지 확인하는 오류 검출 필드
+
+	10) Urgent Pointer(긴급 포인더, 2byte)
+		URG 플래그가 설정된 경우 사용
+		긴급 데이터의 끝 위치를 나타냄
+
+	11) TCP Option(옵션 필드, 가변 길이)
+
+		MSS(Maximum Segment Size)		최대 세그먼트 크기
+		Window Scale					윈도우 크기 확장
+		Timestamp					RTT 측정 및 네트워크 혼잡 감지
+		SACK(Selective Acknowledgment)	손실된 패킷만 선택적으로 재전송
+
+7. UDP(User Datagram Protocol)헤더 구조 분석
+	비연결형(Stateless) 전송 프로토콜
+	tcp보다 가볍고 빠름
+
+	1) SortPort(2byte)
+		송신자(출발지) 포트 번호
+		0 ~ 65535 범위
+
+	2) Destination Port(2byte)
+		수진자(목적지) 포트 번호
+
+		- DNS 서버 : 53, DHCP : 67/68, TFTP : 69
+
+	3) Length(2byte)
+		UDP 헤더(8byte) + 데이터(payload) 크기
+		최소값 : 8byte(헤더만 존재하는 경우)
+
+	4) checksum(2byte)
+		UDP 헤더 및 데이터를 포함한 오류 검출
+		IPv4 선택(Optional) 필드, IPv6에서는 필수 사용
+
+	예제) 192.168.1.1에서 발생하는 TCP 트래픽만 필터링
+		ip.src==192.168.1.1&&tcp
+		ip.dst==192.168.1.1&&tcp
+
+8. NAT, Bridged, Host-Only
+	가상머신(VM)을 사용할 때 네트워크 모드를 선택해야 한다
+	VM이 실제 네트워크와 어떻게 연결될지를 결정하는 역할을 한다
+
+	1) NAT(Network Address Translation) 모드
+		vm이 외부 네트워크와 통신 가능하지만, 내부에서는 접근할 수 없음
+		vm이 공유기를 통해 인터넷에 연결되는 것과 유사함
+
+		- 가상 머신(vm)은 호스트 머신과 동일한 네트워크에 있지 않음
+		- 인터넷(외부)과 통신할 수 있지만 외부에서 직접 접근 불가능
+		- NAT 라우터(Virtual NAT)가 VM의 IP를 변환하여 인터넷에 접속
+		- 보안성이 높아 인터넷은 되지만 외부 접근을 막고 싶을 때 유용함
+
+	2) Bridge(브릿지) 모드
+		vm이 물리 네트워크와 직접 연결됨(독립된 장치처럼 동작)
+		vm이 공유기(DHCP 서버)에서 실제 IP를 할당받음
+
+		- vm이 물리 네트워크(호스트와 같은 네트워크)에 직접 연결됨
+		- 호스트와 같은 네트워크 대역에서 IP를 할당받아 사용
+		- 외부에서 직접 vm에 접근할 수 있음(서버 운영 가능)
+		- IP 주소 충돌 주의 필요(DHCP에서 중복된 IP를 할당받지 않도록 설정해야함)
+
+	3) Host-Only(호스트 전용) 모드
+		vm과 호스트 간에서만 통신 가능, 외부 네트워크와 연결되지 않음
+		vm이 네트워크를 완전히 분리하여 독립적인 환경을 유지할 때 사용
+
+		- vm과 호스트 머신만 통신 가능, 인터넷 연결 불가능
+		- 외부 네트워크(인터넷, 공유기)와 연결되지 않음
+		- 가상 네트워크 어댑터를 통해 vm과 호스트 간 통신 가능
+		- vm끼리 통신 가능(같은 Host-Only 네트워크 내에서만 가능)
+
+				인터넷 연결	외부 접근 가능		vm간 통신 가능		호스트와 통신 가능	네트워크 ip 할당 방식
+	==========================================================================================================================
+	NAT			O			X				X(설정 필요)		O				가상 NAT 라우터에서 내부 IP 할당
+	Bridged		O			O				O				O				공유기/DHCP 서버에서 실제 IP 할당
+	Host-Only		X			X				O				O				가상 네트워크 어댑터에서 내부 IP 할당
+
+	#ifconfig	IP 					인터페이스 설정 확인
+	#ip link						네트워크 연결된 장치 확인
+	#ethtoll 장치이름				물리적 랜카드 확인(자세히)
+	#ifconfig 장치이름 down			장치 비활성화
+	#ifconfig 장치이름 up			장치 활성화
+	#ip link set 장치이름 down		네트워크 인터페이스 비활성화
+	#ip link set 장치이름 up			네트워크 인터페이스 활성화
+	#if addr						IP 인터페이스 확인
+	#cd /etc/sysconfig/network-script	네트워크 장치 스크립트 저장소
+	#cat ifcfg-ens33				설정 전 ifcfg-ens33 파일 백업하기
+		IP 설정 시 필요한 것(고정 IP 설정 시)
+			DEVICE=장치이름
+			BOOTPROTO=static	#dhcp or none
+			IPADDR=192.168.10.10
+			NETMASK=255.255.255.0
+			GATEWAY=192.168.10.2
+			DNS1=168.126.63.1
+			DNS2=8.8.8.8
+			ONBOOT=yes
+
+		DHCP 설정 시
+			DEVICE=장치이름
+			BOOTPROTO=dhcp
+			ONBOOT=yes
+
+		가상 네트워크 에디터
+			VMnet1	Host-Only
+			Subnet IP : 192.168.10.0
+			Subnet mask : 255.255.255.0
+
+		네트워크 어뎁터 변경
+			Custom : VMnet1(Host-Only)
+
+	#nmcli connection show
+	#nmcli connection up "장치이름"
+	#ifconfig
+
+	* ens33 네트워크 IP 주소 추가 실패한 경우
+	#nmcli connection show				현재 설정된 네트워크 확인
+	#nmcli connection delete "장치이름"
+	#nmcli connection add type ethernet ifname ens33 con-name "ens33" ipv4.address 192.168.10.10/24 ipv4.gateway 192.168.10.2 ipv4.dns "168.126.63.1 8.8.8.8" ipv4.method manual autoconnect yes
+	#nmcli device reapply ens33			인터페이스 적용되지 않을 때 강제 재적용
+	#ip addr show ens33
+	#ip route show
+
+	vmnet1 => ip 200.200.200.200
+			gw 200.200.200.2
+
+9. GNS3
+	1) GNS(Global Name Service)
+		네트워크에서 분산된 리소스(서버, 장치, 서비스 등)의 이름을 해석하고 관리하는 시스템
+		DNS(Domain Name System)와 유사한 역할을 수행하지만 광범위하고 유연한 네트워크 환경에서 동작할 수 있다
+
+	2) GNS 주요 개념
+		- 네트워크 이름 해석(Name Resolution) : 장치의 이름을 IP 주소로 변환
+		- P2P 기반의 분산 네트워크(Decentralized Name Service) : 분산된 P2P 방식으로 네트워크 이름을 해석
+		- GNU Name System
+		- GNS3(Graphical Network Simulator 3)
+
+	3) GNS3 설치
+		- ios bin 파일 2개 추가

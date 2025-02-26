@@ -1,0 +1,323 @@
+day56
+
+복습 -> init -> 계정기초 -> 권한
+
+1. init (System Run Level)
+	시스템을 특정 런레벨 또는 타겟으로 전환하는 명령어
+	시스템의 운영상태를 정의하는 단계
+
+	런레벨	의미
+	0		종료(shutdown -h now, halt, power off)
+	1		싱글부트(단일 사용자 모드 root만 가능)
+	2		다중 사용자 모드(text - 네트워크 없음)
+	3		다중 사용자 모드(text)
+	4		예약된 런레벨(사용자 설정)
+	5		다중 사용자 모델(GUI 그래픽 모드)
+	6		시스템 재부팅(shutdown -r now, reboot)
+
+	+) /etc/inittab 파일
+		SysVinit(System V init) 방식의 리눅스 시스템에서 런레벨을 관리하는 설정 파일
+		시스템 부팅 시 실행되는 프로세스를 정의하고 기본적으로 어떤 런레벨로 부팅할 지 결정하는 파일
+
+	+) init 과거 방식과 systemctl 현재 표준방식
+
+				System V init 방식			system 방식
+		동작방식	런레벨 기반				타겟기반
+		설정파일	init						systemd
+				init 0					systemctl poweroff
+				init 6					systemctl reboot
+				init 3					systemctl isolate multi-user.target
+				init 5					systemctl isolate grahpical.target
+				runlevel					systemctl get-default
+				/etc/init.d/에				systemctl 명령 사용
+				서비스 관리 스크립트 존재
+
+2. 계정
+	Add : 추가(addition)
+	Mod : 변경(modify)
+	Del : 삭제(delete)
+
+	명령 -> 파일 -> 실행
+
+	1) 계정/그룹 관련 명령어
+		useradd	계정 추가
+		usermod	계정 수정
+		userdel	계정 삭제
+
+		groupadd	그룹 추가
+		groupmod	그룹 변경
+		groupdel	그룹 삭제
+
+	2) 계정 생성 기본 파일
+		- login.defs에서 참조하는 내용
+			리눅스 시스템에서 사용자 계정과 관련된 보안 정책을 정의하는 설정파일
+			비밀번호 정책, UID/GID 범위, 로그인 관련 옵션 등 설정
+			root만 수정 가능
+
+		- vi /etc/loing.defs
+			(1) 페스워드 정책 설정
+
+				설정 항목													기본값
+				PASS_MAX_DAYS	비밀번호 최대 사용 기간(초과시 변경 필요)		99999
+				PASS_MIN_DAYS	비밀번호 최소 사용 기간(변경 전 최소 유지 일 수)	0
+				PASS_MIN_LEN	최소 비밀번호 길이							5
+				PASS_WARN_AGE	비밀번호 만료 전 경고 기간(일)					7
+
+			(2) 사용자 ID, 그룹 ID 범위 설정
+				새로운 계정을 만들 때 사용할 UID/GID 범위 설정
+
+				설정 항목										기본값
+				UID_MIN		일반 사용자 계정의 최소 UID 값	1000
+				UID_MAX		일반 사용자 계정의 최대 UID 값	60000
+				SYS_UID_MIN	시스템 계정의 최소 UID 값		201
+				SYS_UID_MAX	시스템 계정의 최대 UID 값		999
+				GID_MIN		일반 그룹의 최소 GID 값			1000
+				GID_MAX		일반 그룹의 최대 GID 값			60000
+
+			(3) UMASK(파일 및 디렉토리 생성 기본 권한)
+				파일과 디렉토리가 생성될 때 적용되는 기본 권한을 결정하는 값
+
+				UMASK 022
+
+				디렉토리 기본 권한 : 777 - 022		=> 755(rwxr-xr-x)
+				파일 기본 권한 : 666 - 022		=> 644(rw-r--r--)
+
+				일반 사용자가 로그인하면 UMASK 002
+
+				r : 4
+				w : 2
+				x : 1
+
+				ls -l	 파일 및 디렉토리의 권한, 소유자, 그룹, 크기, 수정 날짜, 파일명을 확인할 수 있다
+				drwxrwxr-x  2 moon moon 4096  2월 14 11:35 test
+				drwxr-xr-x  2 root root 4096  2월 14 11:36 test0
+				-rw-r--r--  1 root root    0  2월 14 11:36 test00
+				-rw-rw-r--  1 moon moon    0  2월 14 11:35 test1
+
+				drwxrwxr-x  2 moon moon 4096  2월 14 11:35 test
+					d	디렉토리
+					rwx	소유자 읽기, 쓰기, 실행 가능(moon)
+					rwx	그룹 읽기, 쓰기, 실행 가능(moon)
+					r-x	기타 사용자 읽기, 실행
+
+				drwxr-xr-x  2 root root 4096  2월 14 11:36 test0
+					d	디렉토리
+					rwx	소유자 읽기, 쓰기, 실행 가능(root)
+					r-x	그룹 읽기, 실행 가능(root)
+					r-x	기타 사용자 읽기, 실행 가능
+
+				-rw-r--r--  1 root root    0  2월 14 11:36 test00
+					-	파일
+					rw-	소유자 읽기, 쓰기 가능(root)
+					r--	그룹 읽기 가능(root)
+					r--	기타 사용자 읽기 가능
+
+				-rw-rw-r--  1 moon moon    0  2월 14 11:35 test1
+					-	파일
+					rw-	소유자 읽기, 쓰기 가능(root)
+					rw-	그룹 읽기, 쓰기 가능(root)
+					r--	기타 사용자 읽기 가능
+
+			(4) 홈 디렉토리 생성 여부 결정
+				설정 항목													기본값
+				CREATE_HOME		사용자 계정 생성 시 홈 디렉토리 자동생성		yes
+				USERGUOUPS_BEAN	가본 그룹과 함께 사용자 생성				yes
+
+			(5) 암호화 방식 설정(비밀번호 해시 알고리므)
+				ENCRYPT_MENTHOD	비밀번호 암호화 방식(SHA512, MD5, BCTPT등) SHA512
+
+				햄시함수(hash = 무결성)
+				단방향 암호화(복호화 x)
+				MD5		$1$
+				SHA256	$5$
+				SHA512	$6$
+
+	3) 계정/비밀번호 정보  문서
+		/etc/passwd
+		[ID] : [X] : [UID] : [GID] : [별명] : [홈디렉토리] : [쉘]
+
+		/etc/shadow
+		ID : PW : 비밀번호 생성 일 수 : 비밀번호 변경 가능 일 수 : 비밀번호 최대 유효기간 : 만료 경고 일 수 : 계정 활성 여부 : 만료 일 수
+
+		/etc/group
+		그룹명 : X : GID :
+
+	4) 계정 생성 시 생성 파일 및 디렉토리
+		/home				기본 홈 디렉토리 생성 base 저장소(/home/계정명)
+		/etc/skel				홈 디렉토리 기본 구성 파일 저장소(.bash_profile, kshrc 등)
+		/var/spool/mail/계정명	메일파일
+		/etc/default/useradd	useradd 기본 설정 문서
+
+		[root@localhost moon]# cat /etc/default/useradd
+		# useradd defaults file
+		GROUP=100				기본 GID(UID = GID)
+		HOME=/home				기본 $HOME base dir
+		INACTIVE=-1				PW 유효기간(-1 비활성)
+		EXPIRE=					PW 만료기간(비활성)
+		SHELL=/bin/bash			기본 $SHELL
+		SKEL=/etc/skel			기본 skel 경로
+		CREATE_MAIL_SPOOL=yes	메일 파일 생성 여부
+
+		[root@localhost moon]# useradd -D -b /home -s /bin/bash
+			-b $HOME basedir
+			-s $SHELL
+
+	5) useradd
+		sun : x : 1000 : 1000 : linux_sun : /home/sun : /bin/bash
+				-u	-g		-c		-d		-s
+
+		-u			UID 지정
+					useradd -u 1100 계정명
+					그룹 미지정시 UID와 같은 GID가 생성됨
+
+		-g			GID 지정(1차 그룹 : 주 그룹)
+					useradd -g test1 test2
+
+		-G			그룹 가입(2차 그룹 : 보조 그룹)
+					useradd -G test1 test3
+
+		-c			별칭(GUI display)
+					useradd -c 별칭 test4
+ 
+		-d			계정 접속 위치 지정
+					(create home = yes에 의해 적용)
+					mkdir -p /export/home
+					useradd -d /export/home/test5 test5 (추천)
+					useradd -d /export/home test5(추천하지 않음)
+					* -d 옵션 사용 시 가급적 계정명과 동일한 경로까지 기재
+
+		-s			쉘 지정
+					useradd -s /bin/csh test6
+
+		-m -k (-mk)	1회성 스켈 지정(기본값 /etc/skel)
+					mkdir /sk
+					touch /sk/1
+					useradd -mk /sk -s /bin/csh test7
+
+		※ 로그인 시에는 반드시 password 설정을 해야한다
+
+		user -> shell -> kernel -> OS
+
+		shell : kernel에게 명령을 전달해주는 해석기
+		kernel : HW/SW를 연결해주는 중계 프로그램(자원 메모리 관리)
+		OS : Operating System 조작 시스템(인터페이스 제공)
+
+		쉘 확인 명령어
+		cat /etc/shells
+
+		+) 주요 쉘 종류
+
+			쉘 경로		쉘 이름				특징
+			/bin/sh		Bourne Shell			전통적인 유닉스 기본 쉘(본쉘, Kernel Shell)
+			/bin/bash		Bourne Again Shell		리눅스 기본 쉘(sh + ksh 기능 추가)
+						(bash)
+			/usr/bin/sh	응용 프로그램			일부 프로그램에서 사용(/bin/sh와 동일한 심볼릭 링크)
+			/usr/bin/bash	응용 프로그램 bash		일반적인 /bin/bash와 동일
+			/bin/tcsh		TENEX C Shell(tcsh)	확장된 프로그램 전용 쉘
+			/bin/csh		C Shell(csh)			프로그램 전용 쉘(C언어 스타일의 문법 지원)
+
+	6) groupadd
+		user와 group은 개념이 다르다
+		옵션	-g : 그룹 번호 저장
+
+	7) usermod
+		/etc/passwd
+
+		사용자 : 비밀번호 x : UID : GID : 별칭 : 홈디렉토리 : 쉘
+						  -u	    -g	      -c	   -d		   -c
+
+		-u	UID변경
+			usermode -u 1500 userId
+
+		-g	GID변경(1차 그룹)
+			usermod -g modgroup userId
+
+		-G	그룹 가입(2차 그룹)
+			usermod -G modgroup userId
+			usermod -G gtest userId
+			다중 그룹 가입
+			usermod -a -G modgroup,gtest userId
+			cat /etc/group | grep userId
+
+		-d	디렉토리 경로만 변경 실제 디렉토리 이동 없음
+
+		-md	디렉토리 경로와 실제 디렉토리가 일치해야 함
+
+		-s	쉘 변경
+
+		* 사전에 /export/home이 있는지 확인
+		* 사용 전 /etc/passwd와 살제 홈 디렉토리 위치가 일치함을 반드시 확인하고 쓸 것!!
+
+		[실습] modtest계정이 /local/home/modtest에 접속되도록 하기
+			
+	8) 계정 삭제
+		계정 생성 시 추가되는 문서 파일
+			/etc/passwd	사용자 계정정보 문서 파일
+			/etc/shadow	사용자 비밀번호 정보 문서 파일
+			/etc/group	group 정보 문서 파일
+
+			계정 생성 시 추가되는 파일/디렉토리
+			$HOME				홈디렉토리
+			/var/spool/mail/계정명	메일파일
+
+			#userdel
+				- /etc/passwd /etcc/shadow /etc/group
+				- 문서 파일만 삭제
+				- 홈 디렉토리와 메일 파일 남음
+				- 계정 정지
+				- 계정 복구 가능
+					해당 계정 다시 생성 후 비밀번호 변경
+
+			#userdel -r
+				- /etc/passwd /etc/shadow /etc/group
+				- $HOME, /var/spool/mail/계정명 (파일/디렉토리) 영구삭제
+				- 영구삭제
+				- 계정 복구 불가
+
+		+) awk -F: '$3 >= 1000 {print $1}' /etc/passwd
+			awk	페턴 검색 및 데이터 처리 도구
+				텍스트 파일에서 특정 필드를 추출 가능
+
+			-F	필드 구분자 :으로 설정
+				/etc/passwd 파일은 :으로 구분된 여러 필드로 구성됨
+				-F: 옵션을 사용하면 :을 구분자로 인식하여 필드를 분리
+
+			$3 >= 1000 {print $1}
+				$3 세 번째 필드
+					세 번째 필드가 1000 이상이면 {print $1}
+				$1 첫 번째 필드
+					/etc/passwd의 첫 번재 필드를 출력
+
+			/etc/passwd	파일명
+
+	[실습]
+		1. 다음을 만족하는 계정 만들기(각 계정 만든 후 로그인 할 것) password는 모두 1로 설정
+			1) 계정명 test25
+				별칭		testuser
+				shell		/bin/sh
+
+			2) mkdir	/userskel 디렉토리 생성 후 /etc/skel 복사한 뒤 /userskel를 스켈경로로 참조하여 test26을 만들기
+				(이름 변경 복사하지 말 것)
+
+			3) 계정 기본 생성 경로를 /localhost/home으로 만들고 스켈경로를 /userskel로 한 test27을 만들기
+
+			4) useradd -D 명령을 통해 다음 환경과 같은 기본값을 만들고 옵션 쓰지 말고 test28 만들기
+				shell		/bin/sh
+				home		/export/sdb/home
+
+			5) /etc/default/useradd 파일을 아래와 같이 문서 편집하기
+				GROUP=200
+				HOME=/localhost/home
+				INACTIVE=-1
+				EXPIRE=
+				SHELL=/bin/bash
+				SKEL=/etc/skel
+				CREATE_MAIL_SPOOL=yes
+
+				su - 계정명	exit 로그아웃
+
+				★ 최종 계정 test25 test26 test27 test28
+				ls -al /userskel
+				ls -al /localhost/home
+				ls -al /export/sdb/home
+				cat /etc/default/useradd

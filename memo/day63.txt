@@ -1,0 +1,138 @@
+day62
+
+gns4 연결 -> CentOS7 설치 -> Static 라우팅 -> Static 라우팅과 Serial
+
+1. 록키 리눅스 네트워크 설정 후 GNS3 연결
+
+2. CentOS와 록키 리눅스
+	1) CentOS 특징(7)
+		RHEL 7을 기반으로 한 무료 배포판
+		2014년 출시, 2024년 6월 30일까지 공식 지원
+		RPM 패키지 관리(yum 사용)
+		기본적으로 XFS 파일 시스템 사용(ext4, Btrfs 비공식 지원)
+		네트워크 관리 도구 : network-scripts
+		iptables를 방화벽으로 사용
+		커널 버전 : 3.10
+
+	2) Rocky Linux 특징(8. 10)
+		RHEL 8을 기반으로 한 무료 배포판
+		CentOS의 대체용으로 개발됨
+		RPM 패키지 관리(dnf 사용)
+		기본적으로 XFS 파일 시스템 사용(ext4)
+		네트워크 관리 도구 : NetworkManager	/nmcli로 네트워크 설정 가능
+		firewalld를 방화벽으로 사용
+		CentOS 7 대신 최신 소프트웨어 제공(glibc, systemd, 커널 등)
+		커널 버전 : 4.18
+
+3. Static 라우팅
+	1) 라우터 모듈
+		- NM(Network Module)
+			큰 모듈(4개의 WIC로 구성됨)
+			fe : 패스트 이더넷(fast Ethernet)
+			e : 일반 이더넷(Ethernet)
+
+		- WIC(WAN Interface Card)
+			작은 모듈로 WAN 연결을 담당
+			AM : 모뎀용 인터페이스
+			T : 시리얼(Serial) 인터페이스
+
+	2) 라우팅 개념
+		서로 다른 네트워크를 연결하는 과정
+		Static(정적) 라우팅과 Dynamic(동적) 라우팅으로 구분된다
+
+						특징								장점							단점
+		=====================================================================================================================================
+		Static Routing		사용자가 직접 경로를 설정			부하 적음, 설정이 단순			규모가 커질수럭 네트워크 변화에 대처가 느림
+		Dynamic Routing	네트워크 변화에 따라 자동으로 경로 설정	네트워크 변화에 따르게 대처 가능	부하가 높고 불필요한 패킷 발생
+
+	3) Static 라우팅 설정어
+		ip route [목적지 네트워크 주소] [넷마스크] [해당 네트워크를 알고 있는 인접한 라우터 주소]
+
+4. Static 라우팅과 Serial
+	1) CDP(Cisco Discoverery Protocol)
+		같은 시스코 장비 간에 인접 장비 정보를 자동으로 공유하는 프로토콜
+		멀티 캐시트 주소를 사용하여 이웃 라우터 정보를 파악할 수 있다
+
+		- R(config)#cdp run				cdp 활성화(기본적으로 활성)
+		- R(config)#no cdp run			cdp 비활성화
+		- R(config)#show cdp			cdp 정보 확인
+		- R(config)#show cdp neighbors	cdp로 인접 장비 확인
+		- R(config)#show cdp entry *		인접 장비의 IP 확인
+		- R(config)#show cdp interface	cdp 인터페이스 정보 확인
+
+	2) Serial 링크의 DTE, DCE
+		DTE(Data Terminal Equipment)		데이터가 지나가는 통로(Clock Rate 설정 필요 없음), 데이터 처리
+		DCE(Data Cummnuications Equipment)	상대방과의 통신을 위한 장비(Clock Rate 설정 필요), 시그널 생성
+
+		- Clock Rate
+			시리얼 링크의 초당 비트 전송 속도(전송 속도)
+			주기적으로 보내는 라우터의 신호를 일정하게 함
+			128000/64000 byte(주로 사용)
+
+		- bandwidth
+			전송 속도	
+			1544 / 128 / 64
+			bandwidth가 높은 쪽으로 패킷이 우선적으로 동작함
+
+		- MTU
+			네트워크 장비가 한 번에 전송할 수 있는 최대 데이터 크기
+
+		- Serial
+			WAN 장비, 원거리 장비
+
+		- Serial 인터페이스
+			WAN 장비 간의 원거리 통신을 위한 인터페이스
+
+		+) Serial 프로토콜(encapsulation)
+			HDLC와 point to point 방식이 있다
+
+			HDLC
+				신호 동기화 방식으로서 시스코 장비끼리만 연결(시스코 장비끼리만 사용)
+
+			point to point(ppp)
+				시스코 장비를 포함하여 다른 장비들과 연결, 보통 WAN에서는 PPP를 사용
+				보안 및 여러 계층 제어가 가능
+
+			encapsulation hdlc	시스코 장비끼리 연결 시
+			encapsulation ppp	시스코 포함 이외의 장비들과 연결 시
+
+=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+[연습] pc 2대 라우터 3대
+	1. 라우터 WIC-2T 장착(전원 OFF) -> 전원 ON -> CLI
+	2. CLI 명령어
+		1) IP 설정
+			R(config)#int f0/0
+			R(config-if)#ip add 게이트웨이주소 서브넷마스크주소
+			R(config-if)#no sh
+
+			R(config)#int se0/0
+			R(config-if)#ip add 주소 255.0.0.0
+			R(config-if)#no sh
+
+		2) 라우팅 설정
+			R(config)#int se0/0
+			R(config-if)#ip route 0.0.0.0 0.0.0.0 1.1.1.2
+			R(config)#do show ip route
+
+			S* 0.0.0.0/0 via 1.1.1.2
+
+		3) PPP 설정
+			R(config)#int se0/0
+			R(config-if)#en ppp
+
+		4) BandWidth 설정
+			R(config)#int se0/0
+			R(config-if)#bandwidth 128
+
+		5) Clock Rate 설정(DCE에 설정해야함)
+			R(config)#int se0/0
+			R(config-if)#clock rate 128000
+
+		6) 확인
+			R#show interface se0/0
+				BW 128 kbit
+				Encapsulation ppp
+
+			R#show controllers se0/0
+				DCE/DTE
+				DCE V.35, clock rate 128000

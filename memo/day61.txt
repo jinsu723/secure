@@ -1,0 +1,135 @@
+day61
+
+와이어샤크 -> 와이어샤크 필터링 -> 와이어샤크 실습
+
+1. 와이어샤크(Wireshark)
+	네트워크 패킷 분석 도구
+
+	1) Wireshark가 하는 일
+		네트워크 트래픽을 자세히 보여주는 프로그램
+
+		ex) 유튜브 - 무한도전 영상
+			웹 브라우저를 통해 유튜브 검색 -> 접속
+			웹 브라우저가 유튜브 서버에 요청(패킷)을 보낸다
+			유튜브 서버가 영상 데이터를 보내준다
+			웹 브라우저 화면에 유튜브 영상 목록 -> 영상이 재생된다
+
+	2) 기능
+		단순한 스니퍼(Sniffer)가 아니라 강력한 분석 도구
+		실시간 네트워크 트래픽 캡처
+		프로토콜 분석(HTTP, HTTPS, TCP, UDP, DNS, TLS 등)
+		필터링 기능(특정 IP, 특정 PORT, 특정 Protocol만 따로 분석 가능)
+		네트워크 문제 해결
+		보안 분석
+
+	3) Wireshark 사용 시 주의할 점
+		공공기관에서 다른 사람의 트래픽을 무단으로 캡쳐하면 불법
+		자신이 관리하는 네트워크에서만 사용해야 함
+		HTTPS 패킷은 암호화 되어 있어서 내용을 직접 볼 수 없음(복호화 필요)
+
+2. Wireshark 다운로드
+	* 와이파이 사용하는 기기에서는 사용 하지마라
+		무선으로 진행 시 패킷 캡쳐에 문제 발생 가능
+
+	공식 사이트에서 최신 버전 다운로드(구글 -> Wireshark 검색)
+	Windows Installer(.exe) 다운로드 -> 설치파일 실행
+
+	1) 설치 과정
+		(1) Wireshark Setup 실행 후 Next 클릭
+
+		(2) 라이선스 동의(Wireshark는 무료 소프트웨어 GPL 라이선스) 동의 클릭
+
+		(3) 설치할 구성 요소 선택(Choose Components)
+			+ SSHDump, SiscoDump, WIFIDump 체크
+			+ UDPDump 체크
+
+		(4) NPcap 설치(WinPcap 대체 드라이버) : Wireshark에서 패킷 캡쳐하기 위해 필요함
+			InstallNpcap in WinPcap API-compatible mode 체크 : WinPcap과 호환되도록 설치
+			Support raw 802.11. traffic ... 체크 : 무선 네트워크 캡쳐(일부 WIFI 어댑터 지원 X)
+
+		(5) USBPcap 설치 체크 해제
+
+		(6) 설치 폴더 선택
+
+		(7) 설치 진행
+
+		(8) 설치 완료
+
+		+) GPL(General Public License) 라이선스
+			리처드 스톨만(1983년), 완전히 자유롭게 사용, 수정, 배포할 수 있는 소프트웨어를 만들기 위해 시작
+				- 누구나 자유롭게 사용 가능
+				- 소스코드 공개 필수
+				- 수정 & 재배포 가능(단, 수정한 버전도 GPL을 따라야 함) -> 카피레프트(Copyleft) 정책 -> 수정한 후에도 소스코드 공개해야 함
+				- 상업적 사용 가능(단, 소스코드 공개 조건)
+
+		+) GNU 프로젝트
+			GUN's Not Unix 약자
+			완전히 무료, 소스코드가 공개된 운영체제를 목표로 함
+
+			- GNU 운영체제 : 대부분의 GNU 프로그램은 Linux 커널과 함께 사용됨(GNU/Linux)
+			- GNU 소프트웨어 : GNU Compiler Collection(GCC), GNU Bash, GNU Emacs 등
+
+		+) NPcap
+			네트워크 인터페이스 카드(NIC)에서 오가는 패킷을 가로채서 Wireshark에게 전달
+			Wireshark는 패킷 분석기라면, NPcap은 패킷을 잡아주는 드라이버
+
+		+) WinPcap vs NPcap
+						WinPcap				NPcap
+			지원			구버전(Windows7 지원)	Windows7, 8, 10, 11
+			성능			구형 기술 사용			더 빠르고 안정적
+			보안			보안 취약점 존재		Windows 커널 보안 강화 적용
+			유지보수		개발 중단됨			업데이트
+
+	2) 패킷 상세 분석 방법	
+		- 화면 구성
+			패킷 리스트 창 : 캡쳐된 모든 패킷이 리스트 형태로 표시됨
+			패킷 상세 정보 창 : 선택한 패킷의 계층별 프로토콜 정보가 표시됨
+			헥스 덤프 창 : 선택한 패킷의 원시 데이터(16진수)를 확인할 수 있음
+
+		- 기본 정보 확인
+			선택한 패킷의 프레임 정보 : 패킷 크기, 캡쳐된 인터페이스 정보 확인
+			이더넷 정보(EthernetII) : 출발지 및 목적지 MAC 주소 확인
+			IP정보(Internet Protocol v4) : Source Address(출발지 IP 주소) / Destination Address(목적지 IP 주소)
+			TCP 정보(Transmission Control Protocol) : Source Port / Destination Port / Seq, Ack / Flags
+
+		- 와이어 샤크 필터 활용
+			tcp.port == 443					HHTPS 트래픽만 확인
+			ip.addr == 172.16.10.10				특정 IP 관련 트래픽 보기
+			tcp.flags.syn == 1					SYN 패킷만 보기
+			tcp.flags.ack == 1					ACK 패킷만 보기
+			ip.src == IP주소 and tcp.port == 443		해당 IP주소에서 발생한 HTTPS 트래픽만 보기
+			ip.host == 도메인주소 and tcp.port == 443	특정 사이트에서 오는 HTTPS 트래픽 보기
+
+3. 패킷 필터링
+	1) ICMP Echo Reply 패킷 필터링
+		cmd > ping -n 10 8.8.8.8
+
+		ICMP 패킷 구조에서 첫 번째 바이트 icmp[0]는 ICMP 타입을 나타낸다
+		icmp[0] == 8	ICMP Echo Request(핑 요청)
+		icmp[0] == 0	ICMP Echo Reply(핑 응답)
+
+		icmp && ip.dst == 8.8.8.8		특정 대상 IP의 ICMP 패킷만 보기
+		icmp && ip.src == 192.168.0.1	특정 출발지 IP의 ICMP 패킷만 보기
+
+	2) ARP 패킷 필터링
+		cmd > arp -a
+		cmd > ipconfig			gw 확인
+		cmd > arp -d *
+		cmd > ping 192.168.12.1	gw로 ping 전송 ARP 요청 패킷 발생
+
+	+) TCP
+		연결 지향 방식, 신뢰성
+		질의응답, 쌍방 통신
+
+	+) UDP
+		비연결 지향 방식, 비신뢰성
+		질의응답X, 일방 통신
+
+	★★★ TCP 동작 방식
+		TCP FLAG(6가지)
+			SYN		연결 요청
+			ACK		응답
+			FIN		종료
+			RST		재접속
+			URG		응급
+			PSH		우선

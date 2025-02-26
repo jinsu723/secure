@@ -1,0 +1,266 @@
+dat54
+
+기본 명령어2 -> 실습 문제
+
+1.  새로운 록키 리눅스 vm 만들기
+	가상머신 이름 : rocky_8
+	root 비밀번호 : 1234
+	사용자 계정명 : moon
+	사용자 비밀번호 : qwer1234
+
+	- 디스크 설정은 기존 설치했던 것과 동일하게 설정
+	- 싱글부트에서 root 비밀번호 1로 변경
+	- root 로그인까지 진행 후 대기
+
+2. 기본 명령어2
+	1) 파일/디렉토리 이동(Move)
+		#mv
+
+		#mv /test1/1 /mvtest
+		test1, mvtest 디렉토리가 존재할 경우 test1에 있는 1 파일이 mvtest 디렉토리로 이동
+
+		#mv /test2/a /mvtest
+		teset2, mvtest 디렉토리가 이미 존재할 경우 test2에 있는 a 파일이 mvtest 디렉토리로 이동
+
+		#mv /mvtest/2 /mvtest/2.txt
+		mvtest 폴더의 2 파일이 2.txt 파일로 이름 변경
+
+	2) 빈 디렉토리 삭제(거의 안 씀)
+		#rmdir
+		옵션	-p : 필요한 경우 경로상의 상위 빈 디렉토리도 삭제
+
+	3) 파일 삭제(remove)
+		#rm
+		옵션	-r : 디렉토리 삭제
+			-f : 강제
+			-i : 확인
+
+3. 정규 표현식
+	*	문자 전체
+	?	대체 문자(한 자리) : 필터링
+		ex) 김태현
+			*김*
+			김*
+			*현*
+
+			?		에러 발생
+			??		에러 발생
+			???		김태현
+			?김		에러발생
+			김?현	김태현
+
+	- 논리 연산자
+		&&	and
+		||	or
+
+		#a && b (and)
+			- a 성공 시 b 실행
+			- a 실패 시 b 미실행
+
+		#a || b (or)
+			- a 성공 시 b 미실행
+			- a 실패 시 b 실행
+
+		#a | b (pipe, 연계)
+			- a의 내용을 받아 b로 출력
+
+		#ls -l /etc | grep yum
+			- grep : 문자를 포함하는 열 추출
+
+4.  검색
+	#find
+	#find [범위] -name 파일명 -type [파일/파일명]
+
+	1) 시간 관련(time : 일, min : 분)
+		- atime +n : 파일에 접근한 지 +n일 이상(-n 일 경우 n일 이내)
+		- ctime +n : 파일 생성한 지 +n일 이상(-n일 경우 n일 이내)
+		- mtime +n :파일을 수정한 지 +n일 이상(-n일 경우 n일 이내)
+		- amin +n : 파일에 접근한 지 +n분 이상(-n일 경우 n분 이내)
+		- cmin +n : 파일 생성한 지 +n분 이상(-n일 경우 n분 이내)
+		- mmin +n : 파일 내용 변경한 지 +n분 이상(-n일 경우 n분 이내)
+		- newer target : 타겟 파일 생성 후에 수정된 모든 디렉토리 및 파일(문서 수정) 검색
+
+	2) 권한(setuid, setgid, stickybit)
+		4000	2000	1000
+		관리자 권한 자신 파일을 사용
+
+		- perm
+
+		ex) find / -perm +4000 (kali, centos6까지만 지원)
+
+		ex) find / -perm -u+s
+
+	3) 실행
+		- exec
+			ex) find / home/test -name 'test*' -exec ls -l {} \;
+				{}	결과 내용
+				\	줄 바꿈
+				; 	종결자
+
+	4) 다중 검색
+		ex) find / -name login.defs -o -name inittab
+		ex) find / -name *log* -a -name *defs*
+
+5. mac_time 확인
+	#stat
+	m : modify 내용 수정
+	a : access 접근
+	c : change 파일 이름 변경
+
+	시간 변경 옵션
+	- d : 당일 시간 변경 [시] : [분]
+	- t : 년도 날짜 시간 변경 [yy][yy]mmddhhmm[.ss]
+
+[실습문제]
+* 경로가 없거나 파일이 없으면 만든다
+* 압축을 새로 풀고 싱글부트 진행하기, 푸티 접속 후 스냅샷 찍기
+
+1. 아래 파일 존재하는지 확인(3개 있음)
+   /etc/login.defs		o
+   /home/passwd		x
+   /etc/inittab			o
+   /boot/grub2/grub.cfg	o
+   /bin/vsftp			x
+
+[root@localhost ~]# find / -name "login.defs" -o -name "passwd" -o -name "inittab" -o -name "grub.cfg" -o -name "vsftp"
+/boot/grub2/grub.cfg
+/usr/bin/passwd
+/usr/share/bash-completion/completions/passwd
+/usr/share/licenses/passwd
+/usr/share/doc/passwd
+/etc/passwd
+/etc/login.defs
+/etc/inittab
+/etc/pam.d/passwd
+
+2. 1번에서 존재하는 3개 파일을 /backup 디렉토리에 복사
+
+[root@localhost home]# cd /
+[root@localhost /]# mkdir backup
+[root@localhost /]# ls
+backup  boot  etc   lib    media  opt   root  sbin  sys  usr
+bin     dev   home  lib64  mnt    proc  run   srv   tmp  var
+[root@localhost /]# cd backup
+[root@localhost backup]# pwd
+/backup
+[root@localhost backup]# cp /etc/login.defs /backup
+[root@localhost backup]# cp /etc/inittab /backup
+[root@localhost backup]# cp /boot/grub2/grub.cfg /backup
+[root@localhost backup]# ls
+grub.cfg  inittab  login.defs
+
+3. 복사되어있는 파일을 앞자리 3글자만 따서 /backup/test 디렉토리에 이름 변경 복사
+
+[root@localhost backup]# mkdir test
+[root@localhost backup]# ls
+grub.cfg  inittab  login.defs  test
+[root@localhost backup]# cp grub.cfg test/gru.cfg
+[root@localhost backup]# cp inittab test/ini
+[root@localhost backup]# cp login.defs test/log.defs
+[root@localhost backup]# ll test
+합계 16
+-rw------- 1 root root 6645  2월 12 14:33 gru.cfg
+-rw-r--r-- 1 root root  490  2월 12 14:34 ini
+-rw-r--r-- 1 root root 3076  2월 12 14:34 log.defs
+
+4. 한줄 명령으로 아래 디렉토리에 test1, test2, test3 파일 생성
+   /home => test3
+   /backup => test1
+   /backup/test => test2
+
+[root@localhost backup]# touch /home/test3 /backup/test1 /backup/test/test2
+[root@localhost backup]# ll
+합계 16
+-rw------- 1 root root 6645  2월 12 14:30 grub.cfg
+-rw-r--r-- 1 root root  490  2월 12 14:30 inittab
+-rw-r--r-- 1 root root 3076  2월 12 14:28 login.defs
+drwxr-xr-x 2 root root   61  2월 12 14:36 test
+-rw-r--r-- 1 root root    0  2월 12 14:36 test1
+[root@localhost backup]# ll /home
+합계 20
+drwx------. 2 root root 16384  2월 12 09:50 lost+found
+drwx------. 3 moon moon  4096  2월 12 09:56 moon
+-rw-r--r--  1 root root     0  2월 12 14:36 test3
+[root@localhost backup]# ll test
+합계 16
+-rw------- 1 root root 6645  2월 12 14:33 gru.cfg
+-rw-r--r-- 1 root root  490  2월 12 14:34 ini
+-rw-r--r-- 1 root root 3076  2월 12 14:34 log.defs
+-rw-r--r-- 1 root root    0  2월 12 14:36 test2
+
+5. /backup/test 디렉토리를 /home/test/c/d/linux 이름이 되도록 이름변경 보존복사하기
+
+[root@localhost home]# cp -a /backup/test /home/test/c/d/linux
+[root@localhost home]# ls -lR /home/test/c/d
+/home/test/c/d:
+합계 4
+drwxr-xr-x 2 root root 4096  2월 12 14:36 linux
+
+/home/test/c/d/linux:
+합계 16
+-rw------- 1 root root 6645  2월 12 14:33 gru.cfg
+-rw-r--r-- 1 root root  490  2월 12 14:34 ini
+-rw-r--r-- 1 root root 3076  2월 12 14:34 log.defs
+-rw-r--r-- 1 root root    0  2월 12 14:36 test2
+
+6. /home으로 이동한 뒤 /test디렉토리 만들기
+
+[root@localhost home]# cd /home
+[root@localhost home]# mkdir /test
+[root@localhost home]# cd /
+[root@localhost /]# ls
+backup  boot  etc   lib    media  opt   root  sbin  sys   tmp  var
+bin     dev   home  lib64  mnt    proc  run   srv   test  usr
+
+7. pwd 입력시 /root가 출력되는 곳에서 이동하지 않고 /home /backup /backup/test에 있는 test1, test2, test3을
+   /test에 한줄명령으로 복사하기
+
+[root@localhost ~]# cp /home/test3 /backup/test1 /backup/test/test2 /test
+[root@localhost ~]# ll /test
+합계 0
+-rw-r--r-- 1 root root 0  2월 12 15:02 test1
+-rw-r--r-- 1 root root 0  2월 12 15:02 test2
+-rw-r--r-- 1 root root 0  2월 12 15:00 test3
+
+8. /backup에 있는 파일4개를 /home/test/c/d/test디렉토리에 한줄명령으로 복사하기(-a, -r 옵션쓰지 말것)
+
+[root@localhost backup]# mkdir /home/test/c/d/test && cp /backup/grub.cfg /backup/inittab /backup/login.defs /home/test/c/d/test
+[root@localhost backup]# ll /home/test/c/d/test
+합계 16
+-rw------- 1 root root 6645  2월 12 15:09 grub.cfg
+-rw-r--r-- 1 root root  490  2월 12 15:09 inittab
+-rw-r--r-- 1 root root 3076  2월 12 15:09 login.defs
+
+9. /test1 디렉토리에 파일 1 2 3 4
+   /test2 디렉토리에 dir a b c d
+   pwd -> /mvtest가 나오게 출력
+   전체 디렉토리와 파일을 각각 볼 수 있도록 한줄 명령으로 출력
+
+[root@localhost mvtest]# pwd
+/mvtest
+[root@localhost mvtest]# ls -lR /test1 /test2
+/test1:
+합계 0
+-rw-r--r-- 1 root root 0  2월 12 15:11 1
+-rw-r--r-- 1 root root 0  2월 12 15:11 2
+-rw-r--r-- 1 root root 0  2월 12 15:11 3
+-rw-r--r-- 1 root root 0  2월 12 15:11 4
+
+/test2:
+합계 0
+drwxr-xr-x 2 root root 6  2월 12 15:11 a
+drwxr-xr-x 2 root root 6  2월 12 15:11 b
+drwxr-xr-x 2 root root 6  2월 12 15:11 c
+drwxr-xr-x 2 root root 6  2월 12 15:11 d
+
+/test2/a:
+합계 0
+
+/test2/b:
+합계 0
+
+/test2/c:
+합계 0
+
+/test2/d:
+합계 0

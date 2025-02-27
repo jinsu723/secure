@@ -359,7 +359,7 @@ OSI 7 Layer 과 PDU -> Cable -> 1 ~ 2계층 통신
 			Forwarding(포워딩)	MAC 주소 테이블을 기방느로 올바른 포트로 데이터 전송
 			Aging(에이징)		일정 시간이 지나면 사용되지 않는 MAC 주소를 테이블에서 삭제
 
-		- STP(Spnning Tree Protocol)
+		- STP(Spinning Tree Protocol)
 			네트워크에서 루프(Loop) 발생을 방지하기 위해 사용되는 프로토콜
 			네트워크 장비 간에 브로드캐스트 스톰(Broadcast Storm) 및 패킷 중복을 감지
 

@@ -1,0 +1,169 @@
+day65
+
+복습 -> PW, Telnet, SSH 설정 -> 라우터 복구 -> 실습 -> 시험공부
+
+1. 비밀번호 설정
+	1) enable password
+		privilieged EXEC모드(관리자 모드, enable 모드)로 진입할 때 필요한 비밀번호를 설정하는 명령어
+
+	2) ebable passowrd 역할
+		보안 강화
+		평문으로 비밀번호를 설정(enable secret보다 취약)
+
+	3) 보안 강화 : enable secret
+		MD5 해시 알고리즘을 사용하여 암호화됨
+		enable password보다 보안성이 강함
+
+	4) 비밀번호 제거
+		no enable password
+		no enable secret
+
+	5) service password-encryption
+		라우터의 모든 평문 비밀번호를 암호화 하는 기능을 활성화하는 명령어
+
+		- 역할
+			enable password, line password 비밀번호는 show run을 실행 시 비밀번호가 평문으로 보임
+			암호화된 형식으로 저장하여 보안성을 강화하지만 암호화 수준이 약함(Type 7 암호화 방식)
+
+		- 한계
+			Type 7 암호화는 단순한 XOR 연산 기반의 암호화로 보안성이 낮음
+			쉽게 복호화 가능
+
+		- 해제 방법
+			기존 암호화된 비밀번호가 평문으로 다시 돌아오지 않음
+			비밀번호를 다시 설정해햐 함
+			no enable password
+			enable password [새로운 비밀번호]
+
+2. Telnet 서비스 설정
+	1) VTY(Virtual Teletype)
+		시스코 라우터/스위치에서 원격 접속(Telnet, SSH)을 허용하는 가상 터미널 라인
+		CLI 환경에서 최대 16개(0 ~ 15) 세션을 동시에 허용 가능
+		원격 관리 프로토콜에서 사용
+		보안 강화를 위해 반드시 비밀번호 설정 필요함
+
+	2) Telnet
+		네트워크 장비에 원격으로 접속하여 CLI를 사용할 수 있도록 하는 프로토콜(평문으로 접속)
+		IP 네트워크를 통해 원격 접속 가능
+		보안이 중요하지 않은 환경에서 사용
+
+
+		+) telnet, ssh 서비스 차이
+							Telnet			SSH
+			=============================================================================
+			보안성			취약(평문 전송)		양호(암호화)
+			데이터 전송 방식	암호화 없음		암호화된 커널링 사용
+			인증 방식			ID/PW 인증		ID/PW + 공개키(RSA, DSA, ECDSA) 인증
+			암호화 알고리즘	없음				RSA, AES, ECC 등
+			포트 번호			TCP 23번			TCP 22번
+			공격 취약점		패킷 스니핑, MITM	보안 강함(패킷을 가로채도 해독 불가)
+
+	3) Telnet 설정을 위한 기본 조건
+		라우터 VTY(Virtual Terminal Line) 활성화
+		비밀번호 설정(없으면 접속 불가)
+		라우터에 IP 주소가 설정되어 있어야 함
+		login 명령어 활성화
+
+	4) ID/PW telnet 설정
+		login : PW 방식 인증(line-vty에서 설정)
+			R0(config)#line vty 0 4
+			R0(config-line)#password [비밀번호]
+			R0(config-line)#login
+
+		login local : ID/PW 방식 인증(config에서 설정)
+			R0(config)#username [ID] password [PW]
+			R0(config)#line vty 0 4
+			R0(config-line)#login local
+
+	5) console 비밀번호 설정
+		> 유저 모드부터 비밀번호 설정할 때 사용
+
+		login : PW 방식 인증
+			R0(config)#line con 0
+			R0(config-line)#password [PW]
+			R0(config-line)#login
+
+		login local : ID/PW 방식 인증
+			R0(config)#username [ID] password [PW]
+			R0(config)#line con 0
+			R0(config-line)#login local
+
+	+) 비밀번호 설정
+		유저 비밀번호		line-con 콘솔
+		enable [비밀번호]	config 모드(PW만 가능)
+		서비스 비밀번호	line-vty 가상 터미널
+
+	6) 비밀번호 삭제
+		no login
+		no login local
+		no password
+
+3. SSH 암호화 원격 접속 설정
+	SSH(Secure Shell)를 활성화하여 안전한 원격 설정을 할 수 있음
+	ID/PW, 전송 데이터를 암호화하기 때문에 Telnet보다 안정성이 뛰어남
+
+	1) SSH 설정 과정
+		- Host name과 Domain name 설정
+			Router(config)#hostname R0
+			R0(config)#ip domain-name R0
+
+			* 둘 다 해야 암호화 키 생성 가능
+
+		- 암호화 키 생성(RSA)
+			암호화 키 길이가 길수록 보안이 강해지지만 CPU 사용량도 증가함
+
+			R0(config)#crypto key generate rsa
+			How many bits in the modules [512] : 2048(1024 이상으로 사용)	# 암호화 키 길이 설정
+
+		- SSH 프로토콜 버전 설정
+			R0(config)#ip ssh version 2
+
+		- SSH 설정 확인(활성화 확인) 
+			R0#show ip ssh	# 프로토콜 버전이 2인이 반드시 확인
+
+		- SSH 사용자 계정 생성
+			R0(config)#username [ID] privilege 15 secret [PW]
+
+		- VTY(가상 터미널 설정)
+			R0(config)#line vty 0 4
+			R0(config-line)#login local
+
+		- 원격 프로토콜 제한(ssh만 허용, telnet 차단)
+			R0(config)#line vty 0 4
+			R0(config-line)#transport input ssh
+
+	2) SSH 원격 접속 삭제
+		- VTY에서 SSH 제거
+			R0(config-line)#no transport input ssh
+
+		- RSA 암호화 키 삭제
+			R0(config-line)#crypto key zeroize rsa
+
+		- SSH 사용자 계정 삭제
+			R0(config)#no username [ID]
+
+		- SSH 프로토콜 비활성화
+			R0(config)#no ip ssh version2
+
+		- 도메인 이름 삭제
+			R0(config)#no ip domain-name [호스트네임]
+
+		- SSH 삭제 확인
+			R0(config)#do show ip ssh
+
+		- Telnet 활성화
+			R0(config-line)#transtport input telnet
+
+-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-
+[실습]
+		캡쳐 화면, pkt 파일
+		파일 명 : day65_이름, 캡쳐 화면 zip파일로 묶어서
+
+		PC0		192.168.10.10	255.255.255.0
+		SW0		2960 사용
+		Router0	192.168.10.200				hostname R1	con : con1		telnet : tel1		enable : ena1
+		Router1	192.168.10.210				hostname R2	con : con2 / r2	telnet : con2 / r2	enable : ena2	ssh : con2 / r2
+		Router2	192.168.10.220				hostname R3	con : con3		telnet : 안됨		enable : ena3	ssh : korea / r3
+
+		설정 완료 후 PC Termianl에서 각 라우터 접속 후 show run 설정 부분 모두 캡쳐
+		PC Command Prompt에서 연결 확인 모두 캡쳐
